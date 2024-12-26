@@ -7,7 +7,7 @@ import { MainNav } from "@/components/navigation/main-nav";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Feature Pledger",
+  title: "PledgeKit",
   description: "Crowdfund your product features through user pledges",
 };
 

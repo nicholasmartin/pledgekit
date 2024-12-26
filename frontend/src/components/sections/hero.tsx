@@ -10,7 +10,7 @@ export function HeroSection() {
             Transform Your Product Roadmap with User-Backed Features
           </h1>
           <p className="mt-6 text-lg leading-8 text-muted-foreground">
-            Empower your users to fund the features they want most. Feature Pledger helps B2B SaaS companies validate and fund new features through user pledges.
+            Empower your users to fund the features they want most. PledgeKit helps B2B SaaS companies validate and fund new features through user pledges.
           </p>
           <div className="mt-10 flex items-center justify-center gap-x-6">
             <Link href="/register">

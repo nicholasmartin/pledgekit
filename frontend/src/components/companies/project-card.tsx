@@ -4,6 +4,7 @@ import {
   CardContent,
   CardFooter,
   CardHeader,
+  CardTitle,
 } from "@/components/ui/card"
 
 interface ProjectCardProps {
@@ -15,10 +16,12 @@ interface ProjectCardProps {
     amount_pledged: number
     end_date: string
     header_image_url: string | null
+    company_slug: string
   }
+  companySlug: string
 }
 
-export function ProjectCard({ project }: ProjectCardProps) {
+export function ProjectCard({ project, companySlug }: ProjectCardProps) {
   const progress = (project.amount_pledged / project.goal) * 100
   const endDate = new Date(project.end_date)
   const now = new Date()
@@ -27,7 +30,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
   )
 
   return (
-    <Link href={`/projects/${project.id}`}>
+    <Link href={`/companies/${companySlug}/projects/${project.id}`}>
       <Card className="overflow-hidden transition-shadow hover:shadow-lg">
         {project.header_image_url && (
           <div className="aspect-video w-full overflow-hidden">
@@ -40,7 +43,11 @@ export function ProjectCard({ project }: ProjectCardProps) {
         )}
         
         <CardHeader>
-          <h3 className="line-clamp-2 text-lg font-semibold">{project.title}</h3>
+          <CardTitle className="text-lg font-bold">
+            <Link href={`/companies/${project.company_slug}/projects/${project.id}`} className="hover:underline">
+              {project.title}
+            </Link>
+          </CardTitle>
           <p className="line-clamp-2 text-sm text-muted-foreground">
             {project.description}
           </p>

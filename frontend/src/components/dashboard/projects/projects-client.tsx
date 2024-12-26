@@ -43,6 +43,7 @@ interface Project {
     id: string
     title: string
     amount: number
+    benefits: string[]
   }>
 }
 
@@ -131,6 +132,30 @@ export function ProjectsClient({ projects }: ProjectsClientProps) {
                   />
                 </div>
               </div>
+              {project.pledge_options.length > 0 && (
+                <div className="space-y-2">
+                  <span className="text-sm font-medium">Pledge Options</span>
+                  <div className="space-y-2">
+                    {project.pledge_options.map((option) => (
+                      <div key={option.id} className="rounded-lg border p-3 space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium">{option.title}</span>
+                          <span className="text-sm font-medium text-primary">
+                            {formatCurrency(option.amount)}
+                          </span>
+                        </div>
+                        {option.benefits && option.benefits.length > 0 && (
+                          <ul className="text-sm text-muted-foreground list-disc pl-4 space-y-1">
+                            {option.benefits.map((benefit, index) => (
+                              <li key={index}>{benefit}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="flex justify-between text-sm">
                 <span className={`capitalize ${
                   project.status === 'published' ? 'text-green-600' :

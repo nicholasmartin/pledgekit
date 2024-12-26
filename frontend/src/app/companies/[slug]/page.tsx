@@ -22,6 +22,7 @@ interface Project {
   amount_pledged: number
   end_date: string
   header_image_url: string | null
+  company_slug: string
 }
 
 export default function CompanyPage({ params }: { params: { slug: string } }) {
@@ -74,7 +75,7 @@ export default function CompanyPage({ params }: { params: { slug: string } }) {
       console.log("Fetching projects for company:", company.id, "range:", from, "to", to)
       const { data, error } = await supabase
         .from("projects")
-        .select("*")
+        .select("*, companies!inner(slug)")
         .eq("company_id", company.id)
         .eq("status", "published")
         .order("created_at", { ascending: false })
@@ -85,12 +86,18 @@ export default function CompanyPage({ params }: { params: { slug: string } }) {
         return
       }
 
-      console.log("Projects data received:", data)
+      // Transform the data to include company_slug
+      const projectsWithSlug = data.map(project => ({
+        ...project,
+        company_slug: project.companies.slug
+      }))
+
+      console.log("Projects data received:", projectsWithSlug)
       if (data.length < 6) {
         setHasMore(false)
       }
 
-      setProjects(prev => [...prev, ...data])
+      setProjects(prev => [...prev, ...projectsWithSlug])
       setPage(prev => prev + 1)
     } finally {
       setLoading(false)
@@ -123,7 +130,11 @@ export default function CompanyPage({ params }: { params: { slug: string } }) {
       <main className="container py-8">
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
+            <ProjectCard 
+              key={project.id} 
+              project={project} 
+              companySlug={params.slug}
+            />
           ))}
         </div>
         

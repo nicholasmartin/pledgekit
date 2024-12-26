@@ -24,7 +24,15 @@ export default async function ProjectsPage() {
   // Get all projects for the company
   const { data: projects, error: projectsError } = await supabase
     .from("projects")
-    .select("*")
+    .select(`
+      *,
+      pledge_options (
+        id,
+        title,
+        amount,
+        benefits
+      )
+    `)
     .eq("company_id", companyMember?.company_id)
     .order("created_at", { ascending: false })
 

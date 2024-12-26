@@ -69,9 +69,6 @@ export function Sidebar() {
   return (
     <div className="flex h-screen flex-col justify-between border-r bg-background px-4 py-6">
       <div>
-        <div className="flex h-14 items-center px-2 font-semibold">
-          Feature Pledger
-        </div>
         <div className="space-y-1 py-4">
           {sidebarItems.map((item) => (
             <Link
