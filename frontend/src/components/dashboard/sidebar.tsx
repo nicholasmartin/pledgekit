@@ -29,11 +29,6 @@ const sidebarItems = [
     icon: ListTodo,
   },
   {
-    title: "Create Project",
-    href: "/dashboard/projects/new",
-    icon: PlusSquare,
-  },
-  {
     title: "Analytics",
     href: "/dashboard/analytics",
     icon: LineChart,
