@@ -135,22 +135,25 @@ export function ProjectsClient({ projects }: ProjectsClientProps) {
               {project.pledge_options.length > 0 && (
                 <div className="space-y-2">
                   <span className="text-sm font-medium">Pledge Options</span>
-                  <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
                     {project.pledge_options.map((option) => (
-                      <div key={option.id} className="rounded-lg border p-3 space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium">{option.title}</span>
-                          <span className="text-sm font-medium text-primary">
-                            {formatCurrency(option.amount)}
-                          </span>
+                      <div
+                        key={option.id}
+                        className="rounded-lg border bg-card p-2 text-card-foreground hover:bg-accent transition-colors"
+                      >
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium truncate">{option.title}</span>
+                            <span className="text-sm font-medium text-primary whitespace-nowrap">
+                              {formatCurrency(option.amount)}
+                            </span>
+                          </div>
+                          {option.benefits && option.benefits.length > 0 && (
+                            <div className="text-xs text-muted-foreground truncate">
+                              {option.benefits.length} {option.benefits.length === 1 ? 'benefit' : 'benefits'}
+                            </div>
+                          )}
                         </div>
-                        {option.benefits && option.benefits.length > 0 && (
-                          <ul className="text-sm text-muted-foreground list-disc pl-4 space-y-1">
-                            {option.benefits.map((benefit, index) => (
-                              <li key={index}>{benefit}</li>
-                            ))}
-                          </ul>
-                        )}
                       </div>
                     ))}
                   </div>
@@ -166,7 +169,11 @@ export function ProjectsClient({ projects }: ProjectsClientProps) {
                   {project.status}
                 </span>
                 <span className="text-muted-foreground">
-                  Ends {new Date(project.end_date).toLocaleDateString()}
+                  Ends {new Date(project.end_date).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'numeric',
+                    day: 'numeric'
+                  })}
                 </span>
               </div>
             </div>

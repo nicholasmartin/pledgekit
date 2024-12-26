@@ -15,21 +15,34 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { getUserType } from "@/lib/supabase"
 
 export function MainNav() {
   const pathname = usePathname()
   const [user, setUser] = useState<User | null>(null)
+  const [dashboardRoute, setDashboardRoute] = useState<string>("/dashboard")
   const supabase = createClientComponentClient()
 
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
+
+      // Determine dashboard route when user is loaded
+      if (user) {
+        const userType = await getUserType()
+        setDashboardRoute(userType === 'company' ? '/dashboard' : '/dashboard/user')
+      }
     }
     getUser()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null)
+      
+      if (session?.user) {
+        const userType = await getUserType()
+        setDashboardRoute(userType === 'company' ? '/dashboard' : '/dashboard/user')
+      }
     })
 
     return () => subscription.unsubscribe()
@@ -84,7 +97,7 @@ export function MainNav() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-[200px]">
                   <DropdownMenuItem asChild>
-                    <Link href="/dashboard" className="w-full cursor-pointer">
+                    <Link href={dashboardRoute} className="w-full cursor-pointer">
                       Dashboard
                     </Link>
                   </DropdownMenuItem>

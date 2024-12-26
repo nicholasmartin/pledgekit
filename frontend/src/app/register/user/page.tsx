@@ -1,14 +1,27 @@
-"use client"
-
+import { Metadata } from "next"
 import Link from "next/link"
-import { ArrowRight, Building2, User } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
+import { PublicRegisterForm } from "@/components/forms/public-register-form"
 
-export function RegisterOptions() {
+export const metadata: Metadata = {
+  title: "User Registration - PledgeKit",
+  description: "Register to start pledging for features",
+}
+
+export default function UserRegisterPage() {
   return (
     <div className="container relative h-screen flex-col items-center justify-center grid lg:max-w-none lg:grid-cols-2 lg:px-0">
+      <Link
+        href="/register"
+        className={cn(
+          buttonVariants({ variant: "ghost" }),
+          "absolute left-4 top-4 md:left-8 md:top-8"
+        )}
+      >
+        Back
+      </Link>
       <Link
         href="/login"
         className={cn(
@@ -38,7 +51,7 @@ export function RegisterOptions() {
         <div className="relative z-20 mt-auto">
           <blockquote className="space-y-2">
             <p className="text-lg">
-              Choose your account type to get started with PledgeKit
+              Create your account to support and fund the features you want
             </p>
           </blockquote>
         </div>
@@ -47,50 +60,13 @@ export function RegisterOptions() {
         <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
           <div className="flex flex-col space-y-2 text-center">
             <h1 className="text-2xl font-semibold tracking-tight">
-              PledgeKit
+              Create Account
             </h1>
             <p className="text-sm text-muted-foreground">
-              Choose your account type to get started with PledgeKit
+              Enter your details below
             </p>
           </div>
-          <div className="grid gap-6">
-            <Link
-              href="/register/user"
-              className={cn(
-                buttonVariants({ variant: "outline", size: "lg" }),
-                "relative h-auto p-6 space-y-2 hover:bg-muted"
-              )}
-            >
-              <div className="flex items-center space-x-4">
-                <User className="h-6 w-6" />
-                <div className="flex-1 text-left">
-                  <h3 className="font-semibold">Individual Account</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Support and fund features you want to see
-                  </p>
-                </div>
-                <ArrowRight className="h-5 w-5" />
-              </div>
-            </Link>
-            <Link
-              href="/register/company"
-              className={cn(
-                buttonVariants({ variant: "outline", size: "lg" }),
-                "relative h-auto p-6 space-y-2 hover:bg-muted"
-              )}
-            >
-              <div className="flex items-center space-x-4">
-                <Building2 className="h-6 w-6" />
-                <div className="flex-1 text-left">
-                  <h3 className="font-semibold">Company Account</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Crowdfund your product features
-                  </p>
-                </div>
-                <ArrowRight className="h-5 w-5" />
-              </div>
-            </Link>
-          </div>
+          <PublicRegisterForm />
           <p className="px-8 text-center text-sm text-muted-foreground">
             By clicking continue, you agree to our{" "}
             <Link

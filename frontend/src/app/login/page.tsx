@@ -1,6 +1,98 @@
-import { LoginForm } from "@/components/forms/login-form"
+"use client"
+
+import { Metadata } from "next"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
+import * as z from "zod"
+import { supabase, getUserType } from "@/lib/supabase"
+
+import { Button } from "@/components/ui/button"
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import { toast } from "@/components/ui/use-toast"
+
+const formSchema = z.object({
+  email: z.string().email({
+    message: "Please enter a valid email address.",
+  }),
+  password: z.string().min(1, {
+    message: "Password is required",
+  }),
+})
 
 export default function LoginPage() {
+  const router = useRouter()
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  })
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: values.email,
+        password: values.password,
+      })
+
+      if (error) {
+        toast({
+          title: "Login Error",
+          description: error.message,
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Ensure user is logged in
+      if (!data.user) {
+        throw new Error('Login failed: No user data')
+      }
+
+      // Determine user type and redirect accordingly
+      const userType = await getUserType()
+      console.log('Determined User Type:', userType)
+
+      // Use window.location for more reliable redirection
+      if (userType === 'company') {
+        console.log('Redirecting to company dashboard')
+        window.location.href = '/dashboard'
+      } else if (userType === 'public') {
+        console.log('Redirecting to user dashboard')
+        window.location.href = '/dashboard/user'
+      } else {
+        console.log('Redirecting to default dashboard')
+        window.location.href = '/dashboard'
+      }
+
+      toast({
+        title: "Login Successful",
+        description: "Welcome back!",
+      })
+    } catch (error) {
+      console.error('Login error:', error)
+      toast({
+        title: "Login Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      // Ensure loading state is reset
+      form.reset()
+    }
+  }
+
   return (
     <div className="container relative min-h-screen flex-col items-center justify-center grid lg:max-w-none lg:grid-cols-2 lg:px-0">
       <div className="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex dark:border-r">
@@ -27,7 +119,47 @@ export default function LoginPage() {
               Enter your email and password to sign in to your account
             </p>
           </div>
-          <LoginForm />
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="you@example.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="********" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full">
+                Login
+              </Button>
+            </form>
+          </Form>
+          <p className="px-8 text-center text-sm text-muted-foreground">
+            <Link
+              href="/register"
+              className="underline underline-offset-4 hover:text-primary"
+            >
+              Don't have an account? Register
+            </Link>
+          </p>
         </div>
       </div>
     </div>

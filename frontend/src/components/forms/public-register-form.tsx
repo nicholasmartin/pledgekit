@@ -69,29 +69,52 @@ export function PublicRegisterForm() {
           status: authError.status,
           code: authError.code
         })
-        throw authError
+        
+        // Handle specific error cases
+        if (authError.message.includes('User already exists')) {
+          toast({
+            title: "Registration Error",
+            description: "An account with this email already exists. Please login or use a different email.",
+            variant: "destructive"
+          })
+        } else {
+          toast({
+            title: "Registration Error",
+            description: authError.message,
+            variant: "destructive"
+          })
+        }
+        
+        return
       }
 
-      // Create user profile
+      // Create or update user profile (use upsert to handle existing records)
       const { error: profileError } = await supabase
         .from('user_profiles')
-        .insert([
-          {
-            id: authData.user?.id,
-            first_name: values.firstName,
-            last_name: values.lastName,
-            display_name: `${values.firstName} ${values.lastName}`,
-          }
-        ])
+        .upsert({
+          id: authData.user?.id,
+          first_name: values.firstName,
+          last_name: values.lastName,
+          display_name: `${values.firstName} ${values.lastName}`,
+        }, { 
+          onConflict: 'id' 
+        })
 
       if (profileError) {
-        console.error('Profile creation error:', {
+        console.error('Profile creation/update error:', {
           message: profileError.message,
           details: profileError.details,
           hint: profileError.hint,
           code: profileError.code
         })
-        throw profileError
+        
+        toast({
+          title: "Profile Update Error",
+          description: profileError.message,
+          variant: "destructive"
+        })
+        
+        return
       }
 
       toast({
@@ -99,10 +122,8 @@ export function PublicRegisterForm() {
         description: "Please check your email to verify your account.",
       })
       
-      // Store email for verification modal
-      localStorage.setItem('pendingVerificationEmail', values.email)
-      
-      router.push("/explore")
+      // Redirect to dashboard or verification page
+      router.push('/dashboard')
     } catch (error) {
       console.error('Registration error:', error)
       toast({
