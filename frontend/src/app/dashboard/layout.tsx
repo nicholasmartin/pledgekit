@@ -1,18 +1,25 @@
+import { Header } from "@/components/dashboard/header-server"
 import { Sidebar } from "@/components/dashboard/sidebar"
+import { ProtectedLayout } from "@/components/layouts/protected-layout"
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   return (
-    <div className="flex min-h-screen">
-      <Sidebar />
-      <div className="flex-1">
-        <div className="container py-6">
-          <main className="p-6">{children}</main>
+    <ProtectedLayout requireCompany={true}>
+      <div className="flex min-h-screen">
+        <Sidebar />
+        <div className="flex-1 flex flex-col">
+          <Header />
+          <div className="flex-1">
+            <main className="container py-6">
+              {children}
+            </main>
+          </div>
         </div>
       </div>
-    </div>
+    </ProtectedLayout>
   )
 }

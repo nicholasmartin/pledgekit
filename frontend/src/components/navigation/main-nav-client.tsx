@@ -1,10 +1,9 @@
-"use client"
+'use client'
 
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { User } from "@supabase/supabase-js"
+import { usePathname, useRouter } from "next/navigation"
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import {
@@ -15,43 +14,37 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { getUserType } from "@/lib/supabase"
+import type { UserDetails } from "@/lib/server-auth"
 
-export function MainNav() {
+interface MainNavClientProps {
+  initialUserDetails: UserDetails | null
+}
+
+export function MainNavClient({ initialUserDetails }: MainNavClientProps) {
   const pathname = usePathname()
-  const [user, setUser] = useState<User | null>(null)
-  const [dashboardRoute, setDashboardRoute] = useState<string>("/dashboard")
+  const router = useRouter()
   const supabase = createClientComponentClient()
 
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUser(user)
-
-      // Determine dashboard route when user is loaded
-      if (user) {
-        const userType = await getUserType()
-        setDashboardRoute(userType === 'company' ? '/dashboard' : '/dashboard/user')
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_OUT') {
+          router.refresh()
+        } else if (event === 'SIGNED_IN') {
+          router.refresh()
+        }
       }
-    }
-    getUser()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setUser(session?.user ?? null)
-      
-      if (session?.user) {
-        const userType = await getUserType()
-        setDashboardRoute(userType === 'company' ? '/dashboard' : '/dashboard/user')
-      }
-    })
+    )
 
     return () => subscription.unsubscribe()
-  }, [supabase.auth])
+  }, [supabase, router])
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    window.location.href = "/"
+    router.push('/login')
   }
+
+  const dashboardRoute = initialUserDetails?.membership ? '/dashboard' : '/dashboard/user'
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -75,7 +68,7 @@ export function MainNav() {
               </Link>
             </Button>
 
-            {!user ? (
+            {!initialUserDetails ? (
               <>
                 <Button variant="ghost" asChild>
                   <Link href="/login">Login</Link>
@@ -90,7 +83,7 @@ export function MainNav() {
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-8 w-8">
                       <AvatarFallback>
-                        {user.email?.[0].toUpperCase()}
+                        {initialUserDetails.user.email?.[0].toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
@@ -101,20 +94,10 @@ export function MainNav() {
                       Dashboard
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/profile" className="w-full cursor-pointer">
-                      Profile
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/settings" className="w-full cursor-pointer">
-                      Settings
-                    </Link>
-                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="cursor-pointer text-red-600 focus:text-red-600"
-                    onClick={handleSignOut}
+                    onSelect={handleSignOut}
                   >
                     Log out
                   </DropdownMenuItem>
