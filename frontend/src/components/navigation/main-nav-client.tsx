@@ -55,15 +55,15 @@ export function MainNavClient({ initialUserDetails }: MainNavClientProps) {
           </Link>
           <nav className="flex items-center space-x-6 text-sm font-medium">
             <Link
-              href={dashboardRoute}
+              href="/how-it-works"
               className={cn(
                 "transition-colors hover:text-foreground/80",
-                pathname?.startsWith('/dashboard')
+                pathname?.startsWith('/how-it-works')
                   ? "text-foreground"
                   : "text-foreground/60"
               )}
             >
-              Dashboard
+              How it Works
             </Link>
             <Link
               href="/explore"
@@ -101,9 +101,14 @@ export function MainNavClient({ initialUserDetails }: MainNavClientProps) {
                 </DropdownMenu>
               </>
             ) : (
-              <Link href="/login">
-                <Button variant="ghost">Login</Button>
-              </Link>
+              <>
+                <Link href="/login">
+                  <Button variant="ghost">Login</Button>
+                </Link>
+                <Link href="/register">
+                  <Button>Register</Button>
+                </Link>
+              </>
             )}
           </nav>
         </div>
