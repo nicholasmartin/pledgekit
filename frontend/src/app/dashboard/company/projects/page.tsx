@@ -17,10 +17,6 @@ export default async function ProjectsPage() {
     .eq("user_id", user?.id)
     .single()
 
-  console.log("User ID:", user?.id)
-  console.log("Company Member:", companyMember)
-  console.log("Company Error:", companyError)
-
   // Get all projects for the company
   const { data: projects, error: projectsError } = await supabase
     .from("projects")
@@ -36,15 +32,12 @@ export default async function ProjectsPage() {
     .eq("company_id", companyMember?.company_id)
     .order("created_at", { ascending: false })
 
-  console.log("Projects:", projects)
-  console.log("Projects Error:", projectsError)
-
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-bold tracking-tight">Projects</h2>
         <Button asChild>
-          <Link href="/dashboard/projects/new">
+          <Link href="/dashboard/company/projects/new">
             <PlusIcon className="mr-2 h-4 w-4" />
             New Project
           </Link>

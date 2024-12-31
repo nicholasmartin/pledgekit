@@ -1,3 +1,4 @@
+
 export type Json =
   | string
   | number
@@ -7,6 +8,31 @@ export type Json =
   | Json[]
 
 export type Database = {
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          operationName?: string
+          query?: string
+          variables?: Json
+          extensions?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       companies: {
@@ -268,9 +294,30 @@ export type Database = {
         }
         Returns: string[]
       }
+      get_user_type: {
+        Args: {
+          user_id: string
+        }
+        Returns: Database["public"]["Enums"]["user_type"]
+      }
+      rollback_user_types: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      set_user_type: {
+        Args: {
+          user_id: string
+          new_type: Database["public"]["Enums"]["user_type"]
+        }
+        Returns: undefined
+      }
+      set_user_types: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
-      [_ in never]: never
+      user_type: "company_member" | "public_user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -279,12 +326,6 @@ export type Database = {
 }
 
 type PublicSchema = Database[Extract<keyof Database, "public">]
-
-export type RPCFunction = 
-  | 'can_access_project'
-  | 'create_company_with_owner'
-  | 'generate_company_slug'
-  | 'get_user_accessible_projects';
 
 export type Tables<
   PublicTableNameOrOptions extends

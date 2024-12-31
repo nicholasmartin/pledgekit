@@ -49,9 +49,10 @@ interface Project {
 
 interface ProjectsClientProps {
   projects: Project[]
+  limit?: number
 }
 
-export function ProjectsClient({ projects }: ProjectsClientProps) {
+export function ProjectsClient({ projects, limit }: ProjectsClientProps) {
   const router = useRouter()
   const supabase = createClientComponentClient()
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null)
@@ -79,13 +80,15 @@ export function ProjectsClient({ projects }: ProjectsClientProps) {
     return Math.min(Math.round((pledged / goal) * 100), 100)
   }
 
+  const displayedProjects = limit ? projects.slice(0, limit) : projects
+
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {projects.map((project) => (
+      {displayedProjects.map((project) => (
         <Card key={project.id}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-lg font-bold">
-              <Link href={`/dashboard/projects/${project.id}`} className="hover:underline">
+              <Link href={`/dashboard/company/projects/${project.id}`} className="hover:underline">
                 {project.title}
               </Link>
             </CardTitle>
@@ -97,7 +100,7 @@ export function ProjectsClient({ projects }: ProjectsClientProps) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild>
-                  <Link href={`/dashboard/projects/${project.id}/edit`} className="flex cursor-pointer items-center">
+                  <Link href={`/dashboard/company/projects/${project.id}/edit`} className="flex cursor-pointer items-center">
                     <Pencil className="mr-2 h-4 w-4" />
                     Edit
                   </Link>

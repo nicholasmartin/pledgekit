@@ -1,13 +1,13 @@
 import { ProtectedLayout } from '@/components/layouts/protected-layout'
 import { DashboardLayout } from '@/components/layouts/dashboard-layout'
 
-export default function UserDashboardLayout({
+export default function CompanyDashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   return (
-    <ProtectedLayout requiredUserType="public_user">
+    <ProtectedLayout requiredUserType="company_member">
       <DashboardLayout>{children}</DashboardLayout>
     </ProtectedLayout>
   )

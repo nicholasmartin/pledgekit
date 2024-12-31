@@ -22,12 +22,10 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const userDetails = await getUserDetails();
-
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <AuthProvider initialUserDetails={userDetails}>
+        <AuthProvider>
           <Providers>
             <AuthListener />
             <MainNav />

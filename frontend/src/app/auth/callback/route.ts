@@ -13,6 +13,6 @@ export async function GET(request: Request) {
     await supabase.auth.exchangeCodeForSession(code)
   }
 
-  // After email verification, redirect to login
-  return NextResponse.redirect(`${requestUrl.origin}/login?verified=true`)
+  // URL to redirect to after sign in process completes
+  return NextResponse.redirect(new URL('/dashboard', requestUrl.origin))
 }

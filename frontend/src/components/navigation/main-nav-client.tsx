@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
@@ -27,13 +27,19 @@ export function MainNavClient({ initialUserDetails }: MainNavClientProps) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClientComponentClient()
+  const [userDetails, setUserDetails] = useState<UserDetails | null>(initialUserDetails)
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_OUT') {
+          setUserDetails(null)
           router.refresh()
-        } else if (event === 'SIGNED_IN') {
+        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          // Fetch latest user details
+          const response = await fetch('/api/user')
+          const details = await response.json()
+          setUserDetails(details)
           router.refresh()
         }
       }
@@ -42,7 +48,7 @@ export function MainNavClient({ initialUserDetails }: MainNavClientProps) {
     return () => subscription.unsubscribe()
   }, [supabase, router])
 
-  const dashboardRoute = initialUserDetails?.membership ? '/dashboard' : '/dashboard/user'
+  const dashboardRoute = userDetails?.membership ? '/dashboard/company' : '/dashboard/user'
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -80,21 +86,24 @@ export function MainNavClient({ initialUserDetails }: MainNavClientProps) {
         </div>
         <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
           <nav className="flex items-center space-x-2">
-            {initialUserDetails ? (
+            {userDetails ? (
               <>
+                <Button variant="ghost" asChild>
+                  <Link href={dashboardRoute}>Dashboard</Link>
+                </Button>
                 <NotificationsMenu />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                       <Avatar className="h-8 w-8">
                         <AvatarFallback>
-                          {initialUserDetails.user.email?.[0].toUpperCase()}
+                          {userDetails.user.email?.[0].toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>{initialUserDetails.user.email}</DropdownMenuLabel>
+                    <DropdownMenuLabel>{userDetails.user.email}</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <LogoutButton />
                   </DropdownMenuContent>
@@ -102,12 +111,12 @@ export function MainNavClient({ initialUserDetails }: MainNavClientProps) {
               </>
             ) : (
               <>
-                <Link href="/login">
-                  <Button variant="ghost">Login</Button>
-                </Link>
-                <Link href="/register">
-                  <Button>Register</Button>
-                </Link>
+                <Button variant="ghost" asChild>
+                  <Link href="/login">Sign In</Link>
+                </Button>
+                <Button asChild>
+                  <Link href="/register">Get Started</Link>
+                </Button>
               </>
             )}
           </nav>

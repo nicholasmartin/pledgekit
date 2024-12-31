@@ -4,37 +4,38 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
-import type { UserDetails } from './server-auth'
 
 interface AuthContextType {
   user: User | null
-  userDetails: UserDetails | null
   signOut: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ 
-  children,
-  initialUserDetails 
+  children 
 }: { 
   children: React.ReactNode
-  initialUserDetails: UserDetails | null 
 }) {
   const router = useRouter()
-  const [userDetails, setUserDetails] = useState<UserDetails | null>(initialUserDetails)
   const [user, setUser] = useState<User | null>(null)
   const supabase = createClientComponentClient()
 
   useEffect(() => {
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         setUser(session.user)
       } else {
         setUser(null)
-        setUserDetails(null)
+      }
+    })
+
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser(session.user)
       }
     })
 
@@ -44,17 +45,17 @@ export function AuthProvider({
   }, [supabase])
 
   const signOut = async () => {
-    try {
-      const { error } = await supabase.auth.signOut()
-      if (error) throw error
-    } catch (error) {
-      console.error('Error in signOut:', error)
-      throw error
-    }
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
+
+  const value = {
+    user,
+    signOut,
   }
 
   return (
-    <AuthContext.Provider value={{ user, userDetails, signOut }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   )

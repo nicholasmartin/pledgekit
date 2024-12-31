@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { supabase, getUserType } from "@/lib/supabase"
+import { supabase, getClientUserType } from "@/lib/supabase"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -60,20 +60,14 @@ export default function LoginPage() {
         throw new Error('Login failed: No user data')
       }
 
-      // Determine user type and redirect accordingly
-      const userType = await getUserType()
-      console.log('Determined User Type:', userType)
-
-      // Use window.location for more reliable redirection
-      if (userType === 'company') {
-        console.log('Redirecting to company dashboard')
-        window.location.href = '/dashboard'
-      } else if (userType === 'public') {
-        console.log('Redirecting to user dashboard')
-        window.location.href = '/dashboard/user'
+      // Get user type from metadata
+      const userType = await getClientUserType()
+      
+      // Redirect based on user type
+      if (userType === 'company_member') {
+        router.push('/dashboard/company')
       } else {
-        console.log('Redirecting to default dashboard')
-        window.location.href = '/dashboard'
+        router.push('/dashboard/user')
       }
 
       toast({
@@ -84,7 +78,7 @@ export default function LoginPage() {
       console.error('Login error:', error)
       toast({
         title: "Login Error",
-        description: "An unexpected error occurred. Please try again.",
+        description: "An unexpected error occurred during login.",
         variant: "destructive",
       })
     } finally {

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { supabase } from "@/lib/supabase"
+import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -18,6 +18,10 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/use-toast"
+import { Loader2 } from "lucide-react"
+import { registerUser } from "@/lib/auth"
+import { UserType } from "@/lib/types/user"
+import { supabase } from "@/lib/supabase"
 
 const formSchema = z.object({
   firstName: z.string().min(2, {
@@ -36,6 +40,7 @@ const formSchema = z.object({
 
 export function PublicRegisterForm() {
   const router = useRouter()
+  const [isLoading, setIsLoading] = useState(false)
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -47,90 +52,42 @@ export function PublicRegisterForm() {
   })
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    setIsLoading(true)
     try {
-      // Create the user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      // Register user with public user type
+      await registerUser({
         email: values.email,
         password: values.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/dashboard?verified=true`,
-          data: {
-            first_name: values.firstName,
-            last_name: values.lastName,
-            user_type: 'public',
-          },
-        },
+        firstName: values.firstName,
+        lastName: values.lastName,
+        userType: UserType.PUBLIC_USER,
       })
-
-      if (authError) {
-        console.error('Auth error:', {
-          message: authError.message,
-          name: authError.name,
-          status: authError.status,
-          code: authError.code
-        })
-        
-        // Handle specific error cases
-        if (authError.message.includes('User already exists')) {
-          toast({
-            title: "Registration Error",
-            description: "An account with this email already exists. Please login or use a different email.",
-            variant: "destructive"
-          })
-        } else {
-          toast({
-            title: "Registration Error",
-            description: authError.message,
-            variant: "destructive"
-          })
-        }
-        
-        return
-      }
-
-      // Create or update user profile (use upsert to handle existing records)
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .upsert({
-          id: authData.user?.id,
-          first_name: values.firstName,
-          last_name: values.lastName,
-          display_name: `${values.firstName} ${values.lastName}`,
-        }, { 
-          onConflict: 'id' 
-        })
-
-      if (profileError) {
-        console.error('Profile creation/update error:', {
-          message: profileError.message,
-          details: profileError.details,
-          hint: profileError.hint,
-          code: profileError.code
-        })
-        
-        toast({
-          title: "Profile Update Error",
-          description: profileError.message,
-          variant: "destructive"
-        })
-        
-        return
-      }
 
       toast({
         title: "Registration successful!",
-        description: "Please check your email to verify your account.",
+        description: "Please check your email to verify your account before logging in.",
       })
       
-      // Redirect to dashboard or verification page
-      router.push('/dashboard')
+      router.push("/login")
     } catch (error) {
       console.error('Registration error:', error)
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Something went wrong. Please try again.",
-        variant: "destructive",
-      })
+      
+      // Handle specific error cases
+      if (error instanceof Error && error.message.includes('User already exists')) {
+        toast({
+          title: "Registration Error",
+          description: "An account with this email already exists. Please login or use a different email.",
+          variant: "destructive"
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: "Something went wrong. Please try again.",
+          variant: "destructive",
+        })
+      }
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -170,7 +127,7 @@ export function PublicRegisterForm() {
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input placeholder="name@example.com" type="email" {...field} />
+                <Input placeholder="name@example.com" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -183,14 +140,19 @@ export function PublicRegisterForm() {
             <FormItem>
               <FormLabel>Password</FormLabel>
               <FormControl>
-                <Input placeholder="Enter your password" type="password" {...field} />
+                <Input
+                  placeholder="Enter your password"
+                  type="password"
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full">
-          Create account
+        <Button type="submit" className="w-full" disabled={isLoading}>
+          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Register
         </Button>
       </form>
     </Form>
