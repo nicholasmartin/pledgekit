@@ -48,6 +48,18 @@ export const companyNavigation: NavigationConfig = {
       icon: Users,
       description: "Manage user access and roles",
     },
+    {
+      title: "Feature Requests",
+      href: "/dashboard/company/feature-requests",
+      icon: Heart,
+      description: "View and manage feature requests from Canny",
+    },
+    {
+      title: "Settings",
+      href: "/dashboard/company/settings",
+      icon: Settings,
+      description: "Configure your company settings and integrations",
+    },
   ],
   bottomItems: [
     {
