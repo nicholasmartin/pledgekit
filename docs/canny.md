@@ -1,21 +1,12 @@
-# Canny Integration Implementation Guide
+# Canny Integration Guide (Simplified)
 
 ## Overview
-This document outlines the implementation strategy for integrating Canny.io with PledgeKit. The integration allows companies to import their feature requests from Canny and convert them into crowdfunding projects. This enables companies to validate and fund their most requested features through PledgeKit's platform.
+This guide outlines a streamlined approach for integrating Canny.io with PledgeKit. The integration allows companies to view and manage their Canny feature requests within PledgeKit.
 
-## Database Schema
+## Database Structure
+We use the existing tables:
 
-### Existing Tables Used
 ```sql
--- company_members table (existing)
--- Used for authentication and company relationship
-company_members {
-  id: uuid
-  company_id: uuid
-  user_id: uuid
-  role: text (owner, admin, member)
-}
-
 -- company_settings table (existing)
 -- Stores Canny API credentials
 company_settings {
@@ -26,161 +17,240 @@ company_settings {
   updated_at: timestamp
 }
 
--- projects table (existing)
--- Where Canny feature requests can be converted to projects
-projects {
+-- canny_posts table (existing)
+-- Stores synced Canny feature requests
+canny_posts {
   id: uuid
   company_id: uuid
+  canny_post_id: text
   title: text
-  description: text
-  goal: numeric
+  details: text
   status: text
-  // ... other existing fields
+  score: integer
+  comment_count: integer
+  author_name: text
+  url: text
+  created_at: timestamp
+  last_synced_at: timestamp
+  board_id: text
 }
-```
-
-### New Tables Required
-```sql
--- canny_posts table (new)
--- Stores synced Canny feature requests
-CREATE TABLE canny_posts (
-  id: uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  company_id: uuid REFERENCES companies(id),
-  canny_post_id: text UNIQUE,
-  title: text,
-  details: text,
-  status: text,
-  score: integer,
-  comment_count: integer,
-  author_name: text,
-  created_at: timestamp,
-  last_synced_at: timestamp,
-  project_id: uuid REFERENCES projects(id) NULL
-);
-
--- canny_sync_logs table (new)
--- Tracks sync history and errors
-CREATE TABLE canny_sync_logs (
-  id: uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  company_id: uuid REFERENCES companies(id),
-  status: text,
-  error_message: text NULL,
-  records_synced: integer,
-  created_at: timestamp DEFAULT NOW()
-);
 ```
 
 ## Implementation Steps
 
-### 1. Settings Integration
-- [x] Add Canny API key field to company settings
-- [x] Create settings UI for managing Canny integration
-- [x] Implement secure API key storage
-- [x] Add validation for API key format
-
-### 2. Database Setup
-- [ ] Create canny_posts table migration
-- [ ] Create canny_sync_logs table migration
-- [ ] Add necessary indexes for performance
-- [ ] Set up RLS policies for security
-
-### 3. API Integration Layer
-- [x] Create API route for proxying Canny requests
+### 1. API Integration (Backend)
+- [ ] Create API endpoints
+  ```typescript
+  // List Posts with pagination
+  GET /api/canny/posts?page=1&limit=25
+  
+  // Sync posts manually
+  POST /api/canny/sync
+  
+  // Get boards
+  GET /api/canny/boards
+  ```
 - [ ] Implement error handling and rate limiting
-- [ ] Add request caching for performance
-- [ ] Set up periodic background sync
+- [ ] Add request validation
 
-### 4. Feature Request UI
-- [x] Create feature requests list page
-- [ ] Add filtering and sorting capabilities
-- [ ] Implement search functionality
-- [ ] Add pagination support
+### 2. Post Synchronization
+- [ ] Implement manual sync endpoint
+  - Fetch all posts from Canny API
+  - Update local database
+  - Update last_synced_at timestamp
+- [ ] Add sync status indicators
+- [ ] Implement proper error handling
 
-### 5. Project Conversion
-- [ ] Add "Convert to Project" functionality
-- [ ] Create project conversion form
-- [ ] Implement bulk conversion for multiple posts
-- [ ] Add bidirectional sync for updates
+### 3. Feature Requests UI
+- [ ] Create feature requests list page
+  - Display posts in a table view
+  - Add pagination controls
+  - Show sync status and last sync time
+- [ ] Implement filtering
+  - Filter by board
+  - Filter by status
+  - Sort by score/comments/date
+- [ ] Add manual sync button
+- [ ] Show loading states and error messages
 
-### 6. Sync Management
-- [ ] Create sync status dashboard
-- [ ] Implement manual sync trigger
-- [ ] Add sync error reporting
-- [ ] Create sync history view
+### 4. Performance Optimizations
+- [ ] Implement client-side caching using SWR
+  ```typescript
+  // Example SWR configuration
+  const { data, error } = useSWR(
+    `/api/canny/posts?page=${page}&limit=25`,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 60000,
+    }
+  )
+  ```
+- [ ] Add proper loading states
+- [ ] Implement optimistic updates
 
-## API Integration Details
+## API Implementation Details
 
-### Canny API Endpoints Used
+### Post List Endpoint
 ```typescript
-// List Posts
-POST https://canny.io/api/v1/posts/list
-{
-  apiKey: string
-}
+// /api/canny/posts route
+export async function GET(request: Request) {
+  const { page = 1, limit = 25, boards = [], statuses = [] } = request.query
+  const offset = (page - 1) * limit
 
-// Get Post Details
-POST https://canny.io/api/v1/posts/retrieve
-{
-  apiKey: string,
-  id: string
+  // Build query
+  let query = supabase
+    .from('canny_posts')
+    .select('*')
+    
+  // Apply board filters if specified
+  if (boards.length > 0) {
+    query = query.in('board_id', boards)
+  }
+  
+  // Apply status filters if specified
+  if (statuses.length > 0) {
+    query = query.in('status', statuses)
+  }
+
+  // Apply pagination
+  const { data: posts, error } = await query
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1)
+
+  return NextResponse.json({ posts, error })
 }
 ```
 
-### Implementation Guidelines
-1. All Canny API calls should be made server-side
-2. Implement proper error handling and retry logic
-3. Cache responses to minimize API usage
-4. Use background jobs for syncing
-5. Maintain audit logs for all operations
+### Manual Sync Endpoint
+```typescript
+// /api/canny/sync route
+export async function POST(request: Request) {
+  // Get company's Canny API key
+  const { data: settings } = await supabase
+    .from('company_settings')
+    .select('canny_api_key')
+    .single()
 
-## Security Considerations
-1. Store API keys securely in company_settings
-2. Implement RLS policies for all new tables
-3. Validate user permissions for all operations
-4. Sanitize and validate all imported data
-5. Rate limit API requests
+  // Fetch posts from Canny
+  const cannyPosts = await fetchCannyPosts(settings.canny_api_key)
+
+  // Update local database
+  const { error } = await supabase
+    .from('canny_posts')
+    .upsert(cannyPosts, { onConflict: 'canny_post_id' })
+
+  return NextResponse.json({ success: !error, error })
+}
+```
+
+## Frontend Implementation
+
+### Feature Requests Page
+```typescript
+// Key components needed
+interface FeatureRequestsPage {
+  // Pagination state
+  const [page, setPage] = useState(1)
+  
+  // Filter state
+  const [selectedBoards, setSelectedBoards] = useState<string[]>([])
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
+  
+  // Get boards for filter UI
+  const { data: boards } = useSWR('/api/canny/boards', fetcher)
+  
+  // Get posts with filters
+  const { data, error, mutate } = useSWR(
+    `/api/canny/posts?page=${page}&limit=25&boards=${selectedBoards.join(',')}&statuses=${selectedStatuses.join(',')}`,
+    fetcher
+  )
+
+  // Calculate post counts for boards
+  const getPostCountForBoard = (boardId: string) => {
+    return data?.posts.filter(post => post.board.id === boardId).length ?? 0
+  }
+
+  // Calculate post counts for statuses (from selected boards)
+  const getPostCountForStatus = (status: string) => {
+    let filteredPosts = data?.posts ?? []
+    if (selectedBoards.length > 0) {
+      filteredPosts = filteredPosts.filter(post => selectedBoards.includes(post.board.id))
+    }
+    return filteredPosts.filter(post => post.status.toLowerCase() === status.toLowerCase()).length
+  }
+
+  // Manual sync function
+  const syncPosts = async () => {
+    await fetch('/api/canny/sync', { method: 'POST' })
+    mutate()
+  }
+
+  return (
+    <div>
+      {/* Filters UI */}
+      <div>
+        {/* Board filters with post counts */}
+        {boards?.map(board => (
+          <div key={board.id}>
+            <Checkbox
+              checked={selectedBoards.includes(board.id)}
+              onChange={() => toggleBoard(board.id)}
+            />
+            <span>{board.name}</span>
+            <span>{getPostCountForBoard(board.id)}</span>
+          </div>
+        ))}
+
+        {/* Status filters with post counts */}
+        {CANNY_STATUSES.map(status => (
+          <div key={status.value}>
+            <Checkbox
+              checked={selectedStatuses.includes(status.value)}
+              onChange={() => toggleStatus(status.value)}
+            />
+            <span>{status.label}</span>
+            <span>{getPostCountForStatus(status.value)}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Posts table */}
+      <Table>
+        {/* ... table implementation ... */}
+      </Table>
+    </div>
+  )
+}
+```
 
 ## Error Handling
-1. Invalid API key errors
-2. Network timeout handling
-3. Rate limit exceeded handling
-4. Data validation errors
-5. Sync conflict resolution
+1. Handle common errors:
+   - Invalid/expired API key
+   - Network timeouts
+   - Rate limiting
+2. Show appropriate error messages to users
+3. Implement retry logic where appropriate
 
-## Testing Strategy
-1. Unit tests for API integration
-2. Integration tests for sync process
-3. UI component testing
-4. Error scenario testing
-5. Performance testing
+## Best Practices
+1. Always use pagination for post lists
+2. Cache responses on the client side
+3. Show loading states during sync
+4. Validate API key before saving
+5. Handle errors gracefully with user feedback
+6. Maintain accurate post counts for filters
+7. Update filter counts when posts are synced
 
-## Monitoring and Maintenance
-1. Sync status monitoring
-2. Error rate tracking
-3. API usage monitoring
-4. Performance metrics
-5. Data consistency checks
+## Security Considerations
+1. Store API keys securely
+2. Validate user permissions
+3. Rate limit API requests
+4. Sanitize all data
 
-## Future Enhancements
-1. Real-time updates via webhooks
-2. Advanced filtering options
-3. Custom field mapping
-4. Automated project suggestions
-5. Analytics integration
-
-## Development Phases
-
-### Phase 1: Core Integration
-- Basic API integration
-- Essential UI components
-- Initial database setup
-
-### Phase 2: Enhanced Features
-- Advanced filtering
-- Bulk operations
-- Improved sync process
-
-### Phase 3: Optimization
-- Performance improvements
-- Advanced analytics
-- Extended customization options
+## Next Steps
+After implementing these basic features, consider:
+1. Adding automatic periodic sync
+2. Implementing real-time updates
+3. Adding more detailed post views
+4. Enhancing search capabilities

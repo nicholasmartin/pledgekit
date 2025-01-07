@@ -1,70 +1,90 @@
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
+import { getCompanyContext, checkRateLimit, errorResponse, setCacheHeaders } from "../utils"
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    // Check rate limit
+    const rateLimitError = await checkRateLimit()
+    if (rateLimitError) return errorResponse(rateLimitError)
 
-    // Check if user is authenticated
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      )
+    const { boards = [], statuses = [], sortBy = "score", sortDirection = "desc" } = await request.json()
+    
+    // Validate parameters
+    if (sortBy && !["score", "comment_count", "created_at"].includes(sortBy)) {
+      return errorResponse({ message: "Invalid sort field", status: 400 })
+    }
+    
+    if (sortDirection && !["asc", "desc"].includes(sortDirection)) {
+      return errorResponse({ message: "Invalid sort direction", status: 400 })
     }
 
-    // Get user's company
-    const { data: companyMember } = await supabase
-      .from("company_members")
-      .select("company_id")
-      .eq("user_id", user.id)
+    const { supabase, companyId } = await getCompanyContext()
+
+    // Get the last sync time
+    const { data: lastSync } = await supabase
+      .from("canny_sync_logs")
+      .select("created_at")
+      .eq("company_id", companyId)
+      .eq("status", "complete")
+      .order("created_at", { ascending: false })
+      .limit(1)
       .single()
 
-    if (!companyMember) {
-      return NextResponse.json(
-        { error: "Company not found" },
-        { status: 404 }
-      )
+    // Build query
+    let query = supabase
+      .from("canny_posts")
+      .select("*", { count: "exact" })
+      .eq("company_id", companyId)
+
+    if (boards.length > 0) {
+      query = query.in("board_id", boards)
     }
 
-    // Get company's Canny API key
-    const { data: settings } = await supabase
-      .from("company_settings")
-      .select("canny_api_key")
-      .eq("company_id", companyMember.company_id)
-      .single()
-
-    if (!settings?.canny_api_key) {
-      return NextResponse.json(
-        { error: "Canny API key not found" },
-        { status: 404 }
-      )
+    if (statuses.length > 0) {
+      query = query.in("status", statuses)
     }
 
-    // Make request to Canny API
-    const response = await fetch("https://canny.io/api/v1/posts/list", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    // Apply sorting
+    const sortField = sortBy === "score" ? "score" : 
+                     sortBy === "comment_count" ? "comment_count" : "created_at"
+    query = query.order(sortField, { ascending: sortDirection === "asc" })
+
+    const { data: posts, error } = await query
+
+    if (error) throw error
+
+    // Transform the data to match the expected format
+    const transformedPosts = posts.map(post => ({
+      id: post.canny_post_id,
+      title: post.title,
+      details: post.details,
+      status: post.status,
+      score: post.score,
+      commentCount: post.comment_count,
+      created: post.created_at,
+      board: {
+        id: post.board_id,
+        name: post.board_name
       },
-      body: JSON.stringify({
-        apiKey: settings.canny_api_key,
-      }),
+      author: {
+        name: post.author_name
+      }
+    }))
+
+    const response = NextResponse.json({
+      posts: transformedPosts,
+      lastSyncedAt: lastSync?.created_at
     })
 
-    if (!response.ok) {
-      throw new Error(`Canny API error: ${response.status}`)
-    }
+    // Add cache headers
+    setCacheHeaders(response)
 
-    const data = await response.json()
-    return NextResponse.json(data)
-  } catch (error) {
-    console.error("Error in Canny posts API route:", error)
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    )
+    return response
+
+  } catch (error: any) {
+    console.error("Error in /api/canny/posts:", error)
+    return errorResponse(error)
   }
 }
