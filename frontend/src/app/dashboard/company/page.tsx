@@ -9,12 +9,36 @@ export default async function CompanyDashboard() {
   const session = await getSession()
   const supabase = createServerComponentClient({ cookies })
 
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  // Get the company_id for the current user
+  const { data: companyMember } = await supabase
+    .from("company_members")
+    .select("company_id")
+    .eq("user_id", user?.id)
+    .single()
+
+  if (!companyMember) {
+    return <div>You must be part of a company to view this dashboard.</div>
+  }
+
+  // Get all published projects for the company
   const { data: projects } = await supabase
     .from('projects')
-    .select('*')
-    .eq('company_id', session?.user?.id)
+    .select(`
+      *,
+      pledge_options (
+        id,
+        title,
+        amount,
+        benefits
+      )
+    `)
+    .eq('company_id', companyMember.company_id)
+    .eq('status', 'published')
     .order('created_at', { ascending: false })
-    .limit(5)
+
+  const activeProjectsCount = projects?.length || 0
 
   return (
     <div className="space-y-6">
@@ -27,7 +51,7 @@ export default async function CompanyDashboard() {
         <Card>
           <div className="p-6">
             <h3 className="font-semibold">Active Projects</h3>
-            {/* Add project stats */}
+            <p className="mt-2 text-3xl font-bold">{activeProjectsCount}</p>
           </div>
         </Card>
         <Card>
@@ -50,14 +74,7 @@ export default async function CompanyDashboard() {
         </Card>
       </div>
 
-      <div className="grid gap-4">
-        <Card>
-          <div className="p-6">
-            <h3 className="text-lg font-semibold">Recent Projects</h3>
-            <ProjectsClient projects={projects || []} limit={5} />
-          </div>
-        </Card>
-      </div>
+      
     </div>
   )
 }
