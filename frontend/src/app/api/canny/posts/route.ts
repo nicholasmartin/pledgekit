@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     const rateLimitError = await checkRateLimit()
     if (rateLimitError) return errorResponse(rateLimitError)
 
-    const { boards = [], statuses = [], sortBy = "score", sortDirection = "desc" } = await request.json()
+    const { sortBy = "score", sortDirection = "desc" } = await request.json()
     
     // Validate parameters
     if (sortBy && !["score", "comment_count", "created_at"].includes(sortBy)) {
@@ -37,14 +37,6 @@ export async function POST(request: Request) {
       .from("canny_posts")
       .select("*", { count: "exact" })
       .eq("company_id", companyId)
-
-    if (boards.length > 0) {
-      query = query.in("board_id", boards)
-    }
-
-    if (statuses.length > 0) {
-      query = query.in("status", statuses)
-    }
 
     // Apply sorting
     const sortField = sortBy === "score" ? "score" : 

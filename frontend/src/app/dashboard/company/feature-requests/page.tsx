@@ -106,14 +106,12 @@ export default function FeatureRequestsPage() {
     setSelectedStatuses(CANNY_STATUSES.map(status => status.value))
   }, [])
 
-  // Use SWR for posts with filters
+  // Use SWR for posts with only sorting parameters
   const { data: postsData, error: postsError, mutate: mutatePosts } = useSWR(
     ["/api/canny/posts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        boards: selectedBoards,
-        statuses: selectedStatuses,
         sortBy: sortField,
         sortDirection
       })
@@ -135,32 +133,45 @@ export default function FeatureRequestsPage() {
 
   const isLoading = !postsData && !postsError
 
-  // Calculate status counts based only on selected boards
-  const statusCounts = useMemo(() => {
-    // Filter posts by selected boards only
-    const boardFilteredPosts = selectedBoards.length > 0
+  // Apply board filtering
+  const boardFilteredPosts = useMemo(() => {
+    return selectedBoards.length > 0
       ? allPosts.filter(post => post.board && selectedBoards.includes(post.board.id))
       : allPosts;
-      
-    // Calculate counts for each status
+  }, [allPosts, selectedBoards]);
+
+  // Calculate status counts based on board-filtered posts
+  const statusCounts = useMemo(() => {
     return CANNY_STATUSES.reduce((acc, status) => {
       acc[status.value] = boardFilteredPosts.filter(
         post => post.status.toLowerCase() === status.value.toLowerCase()
       ).length;
       return acc;
     }, {} as Record<string, number>);
-  }, [allPosts, selectedBoards]);
+  }, [boardFilteredPosts]);
 
   // Simple lookup for status counts
   const getPostCountForStatus = (status: string) => statusCounts[status] || 0;
 
+  // Calculate board post counts from all posts
+  const boardCounts = useMemo(() => {
+    return boards.reduce((acc: Record<string, number>, board: CannyBoard) => {
+      acc[board.id] = allPosts.filter(post => post.board && post.board.id === board.id).length;
+      return acc;
+    }, {} as Record<string, number>);
+  }, [allPosts, boards]);
+
+  // Simple lookup for board counts
+  const getPostCountForBoard = (boardId: string) => boardCounts[boardId] || 0;
+
   // Filter and sort posts for display
   const filteredAndSortedPosts = useMemo(() => {
+    // Start with all posts
     let result = [...allPosts]
 
     // Apply board filter
     if (selectedBoards.length > 0) {
-      result = result.filter((post: CannyPost) => post.board && selectedBoards.includes(post.board.id))
+      result = result.filter(post => post.board && selectedBoards.includes(post.board.id))
     }
 
     // Apply status filter
@@ -231,12 +242,6 @@ export default function FeatureRequestsPage() {
       })
     }
   }, [postsError, toast])
-
-  // Calculate posts per board
-  const getPostCountForBoard = (boardId: string) => {
-    const board: CannyBoard | undefined = boards.find((board: CannyBoard) => board.id === boardId)
-    return board ? board.postCount : 0
-  }
 
   const getStatusColor = (status: string): "default" | "destructive" | "outline" | "secondary" => {
     switch (status.toLowerCase()) {
