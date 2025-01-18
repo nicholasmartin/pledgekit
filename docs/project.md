@@ -3,14 +3,24 @@
 ## 1. Project Overview
 
 ### Core Purpose
-A B2B SaaS platform enabling companies to crowdfund feature development through user pledges, similar to Kickstarter but specifically for product feature requests and roadmap items.
+A B2B SaaS platform enabling software companies to crowdfund feature development through user pledges. Built on top of Canny's feature request system, we provide a seamless way for companies to monetize and prioritize their product roadmap through user financial commitments.
 
 ### Target Users
-- Primary: B2B SaaS companies (platform clients)
+- Primary: B2B SaaS companies using Canny for feature requests
 - Secondary: End users of these companies (pledge makers)
 
+### Core Technical Foundations
+This project is built on several fundamental technical decisions that form the backbone of our architecture:
+
+- **Supabase**: Our foundational platform for both authentication and database management. This is a core architectural decision that will not change.
+- **Canny Integration**: Primary source for feature requests, deeply integrated into our platform's core functionality.
+- **Next.js with App Router**: Modern React framework for our frontend implementation
+- **Express.js**: Backend framework for API development
+- **Stripe**: Payment processing integration
+
 ### Key Requirements
-- Allow companies to create and manage feature funding projects
+- Seamless integration with existing Canny boards for feature request management
+- Allow companies to create funding campaigns for Canny feature requests
 - Enable end users to pledge money towards desired features
 - Process payments and manage rewards/benefits
 - Provide dashboard for companies to track projects and pledges
@@ -41,44 +51,49 @@ A B2B SaaS platform enabling companies to crowdfund feature development through 
 │   ├── Authentication (Supabase)
 │   ├── Project Management
 │   ├── Pledge Processing
+│   ├── Canny Sync Service
 │   └── Payment Integration
 └── Database (Supabase PostgreSQL)
     ├── User Management
     ├── Project Data
+    ├── Canny Integration
     └── Transaction Records
 ```
 
 ### Core Technologies
-- Frontend: Next.js 14 (App Router)
-- Authentication: Supabase Auth
-- Database: Supabase PostgreSQL
+- Frontend: Next.js (App Router)
+- Authentication & Database: Supabase
+- Feature Management: Canny
 - Payment Processing: Stripe
-- AI Integration: For header image generation
 - Error Tracking: Sentry
 
 ### External Integrations
+- Canny API for feature request sync
 - Stripe API for payment processing
-- Supabase Auth with Google OAuth
-- AI service for image generation
-- Gravatar for user avatars
+- Supabase Auth
 - Sentry for error tracking
 
 ## 3. Core Features and Modules
 
 ### Must-Have Features
+- Canny Integration Module (Complexity: High)
+  - Automatic sync with company's Canny board
+  - Feature request import and status tracking
+  - Bi-directional updates between Canny and pledges
+  - Analytics integration
+
 - Company Management Module (Complexity: Medium)
   - Company registration with Supabase Auth
   - Yearly subscription management
   - User role management through company_members table
-  - Project management
+  - Canny board configuration
   - Branding customization
 
 - Project Management Module (Complexity: High)
-  - Project CRUD operations with RLS policies
+  - Project creation from Canny feature requests
   - Draft and preview functionality
   - 30-day maximum duration
   - View tracking (total/unique)
-  - AI-generated header graphics
   - Pledge options management
   - Comments system
 
@@ -95,10 +110,7 @@ A B2B SaaS platform enabling companies to crowdfund feature development through 
   - Pledge history
   - Comment management
 
-### Subscription Tiers (Yearly Only)
-- Starter: $90/year
-- Growth: $290/year
-- Enterprise: $990/year
+
 
 ## 4. Database Schema
 
@@ -116,138 +128,76 @@ create table public.companies (
     subscription_tier text check (subscription_tier in ('starter', 'growth', 'enterprise')),
     stripe_customer_id text,
     stripe_account_id text,
+    canny_api_key text,
+    canny_board_id text,
     constraint valid_slug check (slug ~* '^[a-z0-9-]+$')
 );
 
--- Company members table for employee management
-create table public.company_members (
+-- Canny posts table for feature request sync
+create table public.canny_posts (
     id uuid primary key default uuid_generate_v4(),
     company_id uuid references public.companies(id) on delete cascade,
-    user_id uuid references auth.users(id) on delete cascade,
-    role text not null check (role in ('owner', 'admin', 'member')),
-    created_at timestamp with time zone default timezone('utc'::text, now()),
-    unique(company_id, user_id)
-);
-
--- User profiles for public users
-create table public.user_profiles (
-    id uuid primary key references auth.users(id) on delete cascade,
-    created_at timestamp with time zone default timezone('utc'::text, now()),
-    display_name text,
-    avatar_url text,
-    total_pledged numeric default 0,
-    settings jsonb default '{}'::jsonb
-);
-
--- Projects table
-create table public.projects (
-    id uuid primary key default uuid_generate_v4(),
-    company_id uuid references public.companies(id) on delete cascade,
+    canny_post_id text not null,
     title text not null,
-    description text,
-    goal numeric not null,
-    amount_pledged numeric default 0,
-    end_date timestamp with time zone not null,
-    header_image_url text,
-    status text check (status in ('draft', 'published', 'completed', 'cancelled')),
-    total_views integer default 0,
-    unique_views integer default 0,
-    created_at timestamp with time zone default timezone('utc'::text, now()),
-    constraint valid_duration check (
-        end_date <= created_at + interval '30 days'
-    )
+    details text,
+    status text not null,
+    score integer not null default 0,
+    comment_count integer not null default 0,
+    author_name text,
+    url text,
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    last_synced_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    project_id uuid references projects(id) on delete set null,
+    unique(company_id, canny_post_id)
 );
-
--- Pledge options table
-create table public.pledge_options (
-    id uuid primary key default uuid_generate_v4(),
-    project_id uuid references public.projects(id) on delete cascade,
-    title text not null,
-    amount numeric not null,
-    benefits jsonb default '[]'::jsonb,
-    created_at timestamp with time zone default timezone('utc'::text, now())
-);
-
--- Pledges table
-create table public.pledges (
-    id uuid primary key default uuid_generate_v4(),
-    user_id uuid references auth.users(id) on delete cascade,
-    project_id uuid references public.projects(id) on delete cascade,
-    pledge_option_id uuid references public.pledge_options(id) on delete cascade,
-    status text check (status in ('pending', 'completed', 'failed', 'refunded')),
-    stripe_payment_id text,
-    created_at timestamp with time zone default timezone('utc'::text, now())
-);
-
--- Comments table
-create table public.comments (
-    id uuid primary key default uuid_generate_v4(),
-    project_id uuid references public.projects(id) on delete cascade,
-    user_id uuid references auth.users(id) on delete cascade,
-    quoted_comment_id uuid references public.comments(id),
-    content text not null,
-    created_at timestamp with time zone default timezone('utc'::text, now()),
-    updated_at timestamp with time zone default timezone('utc'::text, now())
-);
-
--- Project views table
-create table public.project_views (
-    id uuid primary key default uuid_generate_v4(),
-    project_id uuid references public.projects(id) on delete cascade,
-    viewer_ip text,
-    viewer_user_agent text,
-    created_at timestamp with time zone default timezone('utc'::text, now())
-);
-```
 
 ## 5. Development Guidelines
 
-### Frontend (Next.js)
-- Use shadcn/ui for component library
-- Implement route-based access control
-- Use React Query for data fetching
-- Implement proper loading states
-- No additional state management required
-- Implement breadcrumb navigation
+### Core Technical Principles
+1. **Supabase First**: All authentication and database operations must use Supabase
+   - Authentication flows must use Supabase Auth
+   - Database operations must utilize Supabase PostgreSQL
+   - Row Level Security (RLS) policies must be implemented for all tables
 
-### Authentication Strategy
-- Unified Supabase authentication system
-- Single-domain architecture with route-based access
-- Email verification required for all users
-- Support email/password and Google OAuth
-- Role-based access through company_members table
-- Session-based authentication with Supabase
+2. **Canny Integration**: All feature management flows through Canny
+   - Features must be sourced from Canny boards
+   - Maintain bi-directional sync with Canny
+   - Respect Canny rate limits and API guidelines
 
-### Error Handling & Monitoring
-- Implement Sentry for error tracking
-- Configure admin notifications
-- Email alerts for Stripe webhook failures
-- Implement retry mechanism for critical operations
-- Handle session expiry and refresh
+3. **Modern Frontend Development**
+   - Use Next.js App Router for routing
+   - Implement proper loading and error states
+   - Follow React best practices
 
-### Onboarding Flow
-1. Company Registration
-   - Basic company information
-   - Employee size range selection
-   - Company slug selection and validation
-2. Account Setup
-   - Branding configuration
-   - Timezone selection
-3. Stripe Integration
-   - Subscription selection
-   - Payment setup
-   - Stripe account connection
+### Development Setup
+1. Required accounts:
+   - Supabase account (for auth and database)
+   - Canny account (for feature management)
+   - Stripe account (for payments)
+   - Sentry account (for error tracking)
 
-### Notification System
-- Company notifications
-  - Stripe webhook failures (admin only)
-  - Project funding goals reached
-  - New pledges received
-- User notifications
-  - Pledge confirmations
-  - Project updates
-  - Comment responses
-  - Getting started guide completion
+2. Environment setup:
+   ```
+   # Required environment variables
+   NEXT_PUBLIC_SUPABASE_URL=
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=
+   SUPABASE_SERVICE_ROLE_KEY=
+   CANNY_API_KEY=
+   STRIPE_SECRET_KEY=
+   SENTRY_DSN=
+   ```
+
+3. Development workflow:
+   - Use TypeScript for all new code
+   - Follow existing patterns for Supabase and Canny integration
+   - Implement proper error handling
+   - Write tests for critical paths
+
+### Deployment
+- Frontend: Vercel (recommended for Next.js)
+- Backend: Any Node.js hosting platform
+- Database: Supabase (managed PostgreSQL)
+- Feature Management: Canny (managed service)
 
 ## 6. Development Phases
 

@@ -1,256 +1,132 @@
-# Canny Integration Guide (Simplified)
+# Canny Integration Documentation
 
 ## Overview
-This guide outlines a streamlined approach for integrating Canny.io with PledgeKit. The integration allows companies to view and manage their Canny feature requests within PledgeKit.
+This document outlines the implementation of Canny.io integration with PledgeKit. The integration enables companies to synchronize and manage their Canny feature requests within PledgeKit.
 
 ## Database Structure
-We use the existing tables:
+
+### Core Tables
 
 ```sql
--- company_settings table (existing)
--- Stores Canny API credentials
-company_settings {
-  id: uuid
-  company_id: uuid
-  canny_api_key: text
-  created_at: timestamp
-  updated_at: timestamp
-}
-
--- canny_posts table (existing)
 -- Stores synced Canny feature requests
-canny_posts {
-  id: uuid
-  company_id: uuid
-  canny_post_id: text
-  title: text
-  details: text
-  status: text
-  score: integer
-  comment_count: integer
-  author_name: text
-  url: text
-  created_at: timestamp
-  last_synced_at: timestamp
-  board_id: text
-}
+CREATE TABLE canny_posts (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  canny_post_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  details TEXT,
+  status TEXT NOT NULL,
+  score INTEGER NOT NULL DEFAULT 0,
+  comment_count INTEGER NOT NULL DEFAULT 0,
+  author_name TEXT,
+  url TEXT,
+  board_id TEXT,
+  board_name TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  last_synced_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
+  UNIQUE(company_id, canny_post_id)
+);
+
+-- Tracks Canny boards and their metadata
+CREATE TABLE canny_boards (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  canny_board_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  post_count INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  last_synced_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  UNIQUE(company_id, canny_board_id)
+);
+
+-- Tracks synchronization operations
+CREATE TABLE canny_sync_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  status TEXT NOT NULL,
+  error_message TEXT,
+  records_synced INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
 ```
 
-## Implementation Steps
+### Performance Indexes
+```sql
+-- Canny Posts indexes
+CREATE INDEX idx_canny_posts_company_id ON canny_posts(company_id);
+CREATE INDEX idx_canny_posts_project_id ON canny_posts(project_id);
+CREATE INDEX idx_canny_posts_status ON canny_posts(status);
+CREATE INDEX idx_canny_posts_score ON canny_posts(score);
+CREATE INDEX idx_canny_posts_board_id ON canny_posts(board_id);
 
-### 1. API Integration (Backend)
-- [ ] Create API endpoints
-  ```typescript
-  // List Posts with pagination
-  GET /api/canny/posts?page=1&limit=25
-  
-  // Sync posts manually
-  POST /api/canny/sync
-  
-  // Get boards
-  GET /api/canny/boards
-  ```
-- [ ] Implement error handling and rate limiting
-- [ ] Add request validation
+-- Canny Boards indexes
+CREATE INDEX idx_canny_boards_company_id ON canny_boards(company_id);
 
-### 2. Post Synchronization
-- [ ] Implement manual sync endpoint
-  - Fetch all posts from Canny API
-  - Update local database
-  - Update last_synced_at timestamp
-- [ ] Add sync status indicators
-- [ ] Implement proper error handling
-
-### 3. Feature Requests UI
-- [ ] Create feature requests list page
-  - Display posts in a table view
-  - Add pagination controls
-  - Show sync status and last sync time
-- [ ] Implement filtering
-  - Filter by board
-  - Filter by status
-  - Sort by score/comments/date
-- [ ] Add manual sync button
-- [ ] Show loading states and error messages
-
-### 4. Performance Optimizations
-- [ ] Implement client-side caching using SWR
-  ```typescript
-  // Example SWR configuration
-  const { data, error } = useSWR(
-    `/api/canny/posts?page=${page}&limit=25`,
-    fetcher,
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      dedupingInterval: 60000,
-    }
-  )
-  ```
-- [ ] Add proper loading states
-- [ ] Implement optimistic updates
-
-## API Implementation Details
-
-### Post List Endpoint
-```typescript
-// /api/canny/posts route
-export async function GET(request: Request) {
-  const { page = 1, limit = 25, boards = [], statuses = [] } = request.query
-  const offset = (page - 1) * limit
-
-  // Build query
-  let query = supabase
-    .from('canny_posts')
-    .select('*')
-    
-  // Apply board filters if specified
-  if (boards.length > 0) {
-    query = query.in('board_id', boards)
-  }
-  
-  // Apply status filters if specified
-  if (statuses.length > 0) {
-    query = query.in('status', statuses)
-  }
-
-  // Apply pagination
-  const { data: posts, error } = await query
-    .order('created_at', { ascending: false })
-    .range(offset, offset + limit - 1)
-
-  return NextResponse.json({ posts, error })
-}
+-- Sync Logs indexes
+CREATE INDEX idx_canny_sync_logs_company_id ON canny_sync_logs(company_id);
+CREATE INDEX idx_canny_sync_logs_created_at ON canny_sync_logs(created_at);
 ```
 
-### Manual Sync Endpoint
-```typescript
-// /api/canny/sync route
-export async function POST(request: Request) {
-  // Get company's Canny API key
-  const { data: settings } = await supabase
-    .from('company_settings')
-    .select('canny_api_key')
-    .single()
+### Row Level Security (RLS)
+All tables have RLS enabled with the following policies:
 
-  // Fetch posts from Canny
-  const cannyPosts = await fetchCannyPosts(settings.canny_api_key)
+#### Canny Posts
+- View: Company members can view their company's posts
+- Insert/Update/Delete: Limited to company admins and owners
 
-  // Update local database
-  const { error } = await supabase
-    .from('canny_posts')
-    .upsert(cannyPosts, { onConflict: 'canny_post_id' })
+#### Canny Boards
+- View: Company members can view their company's boards
+- Insert/Update/Delete: Limited to company admins and owners
 
-  return NextResponse.json({ success: !error, error })
-}
-```
+#### Sync Logs
+- View: Company members can view their company's sync logs
+- Insert/Update/Delete: Limited to company admins and owners
 
-## Frontend Implementation
+## Post Synchronization
 
-### Feature Requests Page
-```typescript
-// Key components needed
-interface FeatureRequestsPage {
-  // Pagination state
-  const [page, setPage] = useState(1)
-  
-  // Filter state
-  const [selectedBoards, setSelectedBoards] = useState<string[]>([])
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
-  
-  // Get boards for filter UI
-  const { data: boards } = useSWR('/api/canny/boards', fetcher)
-  
-  // Get posts with filters
-  const { data, error, mutate } = useSWR(
-    `/api/canny/posts?page=${page}&limit=25&boards=${selectedBoards.join(',')}&statuses=${selectedStatuses.join(',')}`,
-    fetcher
-  )
+### Manual Sync Process
+1. Company admin triggers sync via UI button
+2. System checks rate limit (100 requests/minute global limit)
+3. Creates sync log entry with "in_progress" status
+4. Fetches and syncs boards first
+5. Fetches all posts using pagination (100 posts per request)
+6. Updates sync log with progress
+7. Upserts posts to local database
+8. Updates sync log with final status
 
-  // Calculate post counts for boards
-  const getPostCountForBoard = (boardId: string) => {
-    return data?.posts.filter(post => post.board.id === boardId).length ?? 0
-  }
+### Rate Limiting
+- Global limit: 100 requests per minute
+- Implemented using `limiter` package
+- Applies to all companies collectively
+- Returns 429 status when limit exceeded
 
-  // Calculate post counts for statuses (from selected boards)
-  const getPostCountForStatus = (status: string) => {
-    let filteredPosts = data?.posts ?? []
-    if (selectedBoards.length > 0) {
-      filteredPosts = filteredPosts.filter(post => selectedBoards.includes(post.board.id))
-    }
-    return filteredPosts.filter(post => post.status.toLowerCase() === status.toLowerCase()).length
-  }
+## Feature Requests Page
 
-  // Manual sync function
-  const syncPosts = async () => {
-    await fetch('/api/canny/sync', { method: 'POST' })
-    mutate()
-  }
+### Data Fetching Strategy
+- Uses SWR for data fetching and caching
+- Different cache intervals:
+  - Boards: 60 seconds
+  - Posts: 30 seconds
+- Cache-Control headers:
+  - 5 minutes max age
+  - 1 hour stale-while-revalidate
 
-  return (
-    <div>
-      {/* Filters UI */}
-      <div>
-        {/* Board filters with post counts */}
-        {boards?.map(board => (
-          <div key={board.id}>
-            <Checkbox
-              checked={selectedBoards.includes(board.id)}
-              onChange={() => toggleBoard(board.id)}
-            />
-            <span>{board.name}</span>
-            <span>{getPostCountForBoard(board.id)}</span>
-          </div>
-        ))}
+### Board Filters
+- Shows all boards for company
+- Displays total post count per board
+- Post counts are static and don't change with filters
+- Multiple board selection supported
 
-        {/* Status filters with post counts */}
-        {CANNY_STATUSES.map(status => (
-          <div key={status.value}>
-            <Checkbox
-              checked={selectedStatuses.includes(status.value)}
-              onChange={() => toggleStatus(status.value)}
-            />
-            <span>{status.label}</span>
-            <span>{getPostCountForStatus(status.value)}</span>
-          </div>
-        ))}
-      </div>
+### Status Filters
+- Available statuses: open, under review, planned, in progress, complete, closed
+- Post counts:
+  - Update only when Board selections change
+  - Remain visible when Status is deselected
+  - Don't change based on Status filter selections
+- Multiple status selection supported
 
-      {/* Posts table */}
-      <Table>
-        {/* ... table implementation ... */}
-      </Table>
-    </div>
-  )
-}
-```
-
-## Error Handling
-1. Handle common errors:
-   - Invalid/expired API key
-   - Network timeouts
-   - Rate limiting
-2. Show appropriate error messages to users
-3. Implement retry logic where appropriate
-
-## Best Practices
-1. Always use pagination for post lists
-2. Cache responses on the client side
-3. Show loading states during sync
-4. Validate API key before saving
-5. Handle errors gracefully with user feedback
-6. Maintain accurate post counts for filters
-7. Update filter counts when posts are synced
-
-## Security Considerations
-1. Store API keys securely
-2. Validate user permissions
-3. Rate limit API requests
-4. Sanitize all data
-
-## Next Steps
-After implementing these basic features, consider:
-1. Adding automatic periodic sync
-2. Implementing real-time updates
-3. Adding more detailed post views
-4. Enhancing search capabilities
+### Sorting
+- Available sort fields: score, commentCount, created
+- Sort directions: ascending, descending
+- Default: score descending
