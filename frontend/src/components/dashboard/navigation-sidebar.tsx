@@ -54,9 +54,9 @@ export function NavigationSidebar({ navigation }: NavigationSidebarProps) {
   )
 
   return (
-    <div className="flex h-screen w-64 flex-col border-r bg-background">
+    <div className="flex h-full w-64 flex-col border-r bg-background">
       {/* Main Navigation */}
-      <div className="flex-1 p-4">
+      <div className="flex-1 overflow-y-auto p-4">
         <nav className="flex flex-col gap-1">
           {navigation.mainItems.map((item) => (
             <NavLink key={item.href} item={item} />

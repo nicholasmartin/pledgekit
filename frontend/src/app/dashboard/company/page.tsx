@@ -41,7 +41,7 @@ export default async function CompanyDashboard() {
   const activeProjectsCount = projects?.length || 0
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-[1200px]">
       <DashboardHeader
         heading="Company Dashboard"
         text="Manage your projects and view pledge statistics."

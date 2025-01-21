@@ -52,10 +52,10 @@ export function MainNavClient({ initialUserDetails }: MainNavClientProps) {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center">
-        <div className="mr-4 hidden md:flex">
+      <div className="content-container flex h-14 items-center justify-between">
+        <div className="flex items-center">
           <Link href="/" className="mr-6 flex items-center space-x-2">
-            <span className="hidden font-bold sm:inline-block">
+            <span className="font-bold">
               PledgeKit
             </span>
           </Link>
@@ -84,42 +84,40 @@ export function MainNavClient({ initialUserDetails }: MainNavClientProps) {
             </Link>
           </nav>
         </div>
-        <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
-          <nav className="flex items-center space-x-2">
-            {userDetails ? (
-              <>
-                <Button variant="ghost" asChild>
-                  <Link href={dashboardRoute}>Dashboard</Link>
-                </Button>
-                <NotificationsMenu />
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback>
-                          {userDetails.user.email?.[0].toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>{userDetails.user.email}</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <LogoutButton />
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </>
-            ) : (
-              <>
-                <Button variant="ghost" asChild>
-                  <Link href="/login">Sign In</Link>
-                </Button>
-                <Button asChild>
-                  <Link href="/register">Get Started</Link>
-                </Button>
-              </>
-            )}
-          </nav>
+        <div className="flex items-center space-x-2">
+          {userDetails ? (
+            <>
+              <Button variant="ghost" asChild>
+                <Link href={dashboardRoute}>Dashboard</Link>
+              </Button>
+              <NotificationsMenu />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback>
+                        {userDetails.user.email?.[0].toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>{userDetails.user.email}</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <LogoutButton />
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" asChild>
+                <Link href="/login">Sign In</Link>
+              </Button>
+              <Button asChild>
+                <Link href="/register">Get Started</Link>
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </header>

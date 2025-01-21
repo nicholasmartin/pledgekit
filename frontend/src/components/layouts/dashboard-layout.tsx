@@ -1,6 +1,5 @@
 import { NavigationWrapper } from "@/components/dashboard/navigation-wrapper"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { Header } from "@/components/dashboard/header"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -11,12 +10,13 @@ export function DashboardLayout({
 }: DashboardLayoutProps) {
   return (
     <TooltipProvider>
-      <div className="grid min-h-screen grid-cols-[auto_1fr]">
-        <NavigationWrapper />
-        <div className="flex flex-col">
-          <Header />
-          <main className="flex-1 overflow-y-auto">
-            <div className="container py-6">
+      <div className="flex min-h-screen">
+        <div className="fixed left-0" style={{ top: 'var(--top-nav-height)', height: 'calc(100vh - var(--top-nav-height))' }}>
+          <NavigationWrapper />
+        </div>
+        <div className="flex-1 ml-64" style={{ marginTop: 'var(--top-nav-height)' }}>
+          <main className="h-[calc(100vh-var(--top-nav-height))] overflow-y-auto flex justify-center">
+            <div className="content-container py-6">
               {children}
             </div>
           </main>

@@ -12,12 +12,12 @@ export function DashboardHeader({
   children,
 }: DashboardHeaderProps) {
   return (
-    <div className="flex items-center justify-between px-2">
+    <div className="flex items-center">
       <div className="grid gap-1">
         <Heading size="h1">{heading}</Heading>
         {text && <p className="text-muted-foreground">{text}</p>}
       </div>
-      {children}
+      {children && <div className="ml-auto">{children}</div>}
     </div>
   )
 }
