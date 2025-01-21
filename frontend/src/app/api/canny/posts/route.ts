@@ -35,7 +35,13 @@ export async function POST(request: Request) {
     // Build query
     let query = supabase
       .from("canny_posts")
-      .select("*", { count: "exact" })
+      .select(`
+        *,
+        projects (
+          id,
+          title
+        )
+      `)
       .eq("company_id", companyId)
 
     // Apply sorting
@@ -49,7 +55,8 @@ export async function POST(request: Request) {
 
     // Transform the data to match the expected format
     const transformedPosts = posts.map(post => ({
-      id: post.canny_post_id,
+      id: post.id,
+      canny_post_id: post.canny_post_id,
       title: post.title,
       details: post.details,
       status: post.status,
@@ -62,7 +69,11 @@ export async function POST(request: Request) {
       },
       author: {
         name: post.author_name
-      }
+      },
+      project: post.projects ? {
+        id: post.projects.id,
+        title: post.projects.title
+      } : null
     }))
 
     const response = NextResponse.json({

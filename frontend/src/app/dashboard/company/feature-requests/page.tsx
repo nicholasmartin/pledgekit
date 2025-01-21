@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import {
   Table,
   TableBody,
@@ -14,7 +15,7 @@ import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/components/ui/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
-import { ArrowUpDown, Check, Settings, RefreshCw, Loader2 } from "lucide-react"
+import { ArrowUpDown, Check, Settings, RefreshCw, Loader2, Folder } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   Select,
@@ -27,9 +28,11 @@ import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-r
 import { Separator } from "@/components/ui/separator"
 import useSWR from "swr"
 import { formatDistanceToNow } from "date-fns"
+import { SelectProjectDialog } from "@/components/dashboard/projects/select-project-dialog"
 
 interface CannyPost {
   id: string
+  canny_post_id: string
   title: string
   details: string
   status: string
@@ -42,6 +45,10 @@ interface CannyPost {
   author: {
     name: string
   }
+  project: {
+    id: string
+    title: string
+  } | null
 }
 
 interface CannyBoard {
@@ -68,10 +75,13 @@ const fetcher = (url: string, options?: RequestInit) =>
 export default function FeatureRequestsPage() {
   const [selectedBoards, setSelectedBoards] = useState<string[]>([])
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
+  const [selectedPosts, setSelectedPosts] = useState<string[]>([])
+  const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false)
   const [sortField, setSortField] = useState<SortField>("score")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
   const [allPosts, setAllPosts] = useState<CannyPost[]>([])
   const { toast } = useToast()
+  const supabase = createClientComponentClient()
 
   // Use SWR for boards
   const { data: boardsData, error: boardsError } = useSWR(
@@ -106,25 +116,31 @@ export default function FeatureRequestsPage() {
     setSelectedStatuses(CANNY_STATUSES.map(status => status.value))
   }, [])
 
-  // Use SWR for posts with only sorting parameters
+  // Use SWR for posts
   const { data: postsData, error: postsError, mutate: mutatePosts } = useSWR(
-    ["/api/canny/posts", {
+    ["/api/canny/posts", sortField, sortDirection],
+    ([url]) => fetcher(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         sortBy: sortField,
-        sortDirection
-      })
-    }],
-    ([url, options]) => fetcher(url, options),
+        sortDirection,
+      }),
+    }),
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
       dedupingInterval: 30000, // 30 seconds
+      // Keep the previous data while revalidating
+      keepPreviousData: true,
+      // Revalidate in the background
+      revalidateOnMount: true,
+      // Don't revalidate on window focus
+      focusThrottleInterval: 0
     }
   )
 
-  // Update allPosts when new data arrives
+  // Update allPosts when postsData changes
   useEffect(() => {
     if (postsData?.posts) {
       setAllPosts(postsData.posts)
@@ -368,24 +384,38 @@ export default function FeatureRequestsPage() {
               </span>
             )}
           </div>
-          <Select value={sortField} onValueChange={(value) => setSortField(value as SortField)}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="score">Score</SelectItem>
-              <SelectItem value="commentCount">Comments</SelectItem>
-              <SelectItem value="created">Date Created</SelectItem>
-            </SelectContent>
-          </Select>
 
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setSortDirection(prev => prev === "asc" ? "desc" : "asc")}
-          >
-            <ArrowUpDown className="h-4 w-4" />
-          </Button>
+          {selectedPosts.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" onClick={() => setIsProjectDialogOpen(true)}>
+                Add to Project
+              </Button>
+              <Button onClick={() => {/* TODO: Create new project */}}>
+                Create New Project
+              </Button>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            <Select value={sortField} onValueChange={(value) => setSortField(value as SortField)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="score">Score</SelectItem>
+                <SelectItem value="commentCount">Comments</SelectItem>
+                <SelectItem value="created">Date Created</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setSortDirection(prev => prev === "asc" ? "desc" : "asc")}
+            >
+              <ArrowUpDown className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         <Card>
@@ -404,17 +434,71 @@ export default function FeatureRequestsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[50px]">
+                      <div
+                        role="checkbox"
+                        aria-checked={selectedPosts.length === filteredAndSortedPosts.filter(p => !p.project).length}
+                        tabIndex={0}
+                        className={cn(
+                          "flex h-4 w-4 items-center justify-center rounded border border-primary/20 transition-colors hover:border-primary/30",
+                          selectedPosts.length === filteredAndSortedPosts.filter(p => !p.project).length
+                            ? "bg-primary text-primary-foreground"
+                            : selectedPosts.length > 0
+                            ? "bg-primary/50 text-primary-foreground"
+                            : "opacity-50"
+                        )}
+                        onClick={() => {
+                          if (selectedPosts.length === filteredAndSortedPosts.filter(p => !p.project).length) {
+                            setSelectedPosts([])
+                          } else {
+                            setSelectedPosts(filteredAndSortedPosts.filter(p => !p.project).map(post => post.canny_post_id))
+                          }
+                        }}
+                      >
+                        {selectedPosts.length > 0 && <Check className="h-3 w-3" />}
+                      </div>
+                    </TableHead>
                     <TableHead>Title</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Score</TableHead>
                     <TableHead className="text-right">Comments</TableHead>
                     <TableHead>Author</TableHead>
                     <TableHead>Created</TableHead>
+                    <TableHead className="w-[50px]">Project</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredAndSortedPosts.map((post) => (
                     <TableRow key={post.id}>
+                      <TableCell>
+                        <div
+                          role="checkbox"
+                          aria-checked={selectedPosts.includes(post.canny_post_id)}
+                          aria-disabled={!!post.project}
+                          tabIndex={post.project ? -1 : 0}
+                          className={cn(
+                            "flex h-4 w-4 items-center justify-center rounded border transition-colors",
+                            post.project
+                              ? "border-muted cursor-not-allowed opacity-30"
+                              : "border-primary/20 hover:border-primary/30 cursor-pointer",
+                            selectedPosts.includes(post.canny_post_id)
+                              ? "bg-primary text-primary-foreground"
+                              : "opacity-50"
+                          )}
+                          onClick={() => {
+                            if (post.project) return;
+                            setSelectedPosts((prev) => {
+                              const isSelected = prev.includes(post.canny_post_id)
+                              if (isSelected) {
+                                return prev.filter((id) => id !== post.canny_post_id)
+                              }
+                              return [...prev, post.canny_post_id]
+                            })
+                          }}
+                        >
+                          {selectedPosts.includes(post.canny_post_id) && <Check className="h-3 w-3" />}
+                        </div>
+                      </TableCell>
                       <TableCell className="font-medium">{post.title}</TableCell>
                       <TableCell>
                         <Badge variant={getStatusColor(post.status)}>{post.status}</Badge>
@@ -423,6 +507,16 @@ export default function FeatureRequestsPage() {
                       <TableCell className="text-right">{post.commentCount}</TableCell>
                       <TableCell>{post.author.name}</TableCell>
                       <TableCell>{new Date(post.created).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        {post.project && (
+                          <div 
+                            className="flex items-center justify-center cursor-help text-muted-foreground hover:text-foreground transition-colors"
+                            title={`Added to project: ${post.project.title}`}
+                          >
+                            <Folder className="h-4 w-4" />
+                          </div>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -437,6 +531,69 @@ export default function FeatureRequestsPage() {
           )}
         </Card>
       </div>
+
+      <SelectProjectDialog
+        open={isProjectDialogOpen}
+        onOpenChange={setIsProjectDialogOpen}
+        onProjectSelect={async (projectId) => {
+          try {
+            console.log('Attempting to update posts:', { projectId, selectedPosts })
+
+            // Get the selected project details for optimistic update
+            const { data: projectData } = await supabase
+              .from("projects")
+              .select("id, title")
+              .eq("id", projectId)
+              .single()
+
+            if (!projectData) throw new Error("Project not found")
+
+            // Optimistically update the UI
+            setAllPosts(prevPosts => 
+              prevPosts.map(post => 
+                selectedPosts.includes(post.canny_post_id)
+                  ? {
+                      ...post,
+                      project: {
+                        id: projectData.id,
+                        title: projectData.title
+                      }
+                    }
+                  : post
+              )
+            )
+
+            // Make the actual update
+            const { data, error } = await supabase
+              .from("canny_posts")
+              .update({ project_id: projectId })
+              .in("canny_post_id", selectedPosts)
+
+            console.log('Update result:', { data, error })
+
+            if (error) throw error
+
+            // Clear selected posts
+            setSelectedPosts([])
+            
+            // Show success message
+            toast({
+              title: "Success",
+              description: "Posts added to project successfully",
+            })
+
+            // Revalidate the posts data in the background
+            mutatePosts()
+          } catch (error) {
+            console.error("Error updating posts:", error instanceof Error ? error.message : error)
+            
+            // Revert the optimistic update on error
+            mutatePosts()
+            
+            throw error // This will be caught by the dialog component
+          }
+        }}
+      />
     </div>
   )
 }

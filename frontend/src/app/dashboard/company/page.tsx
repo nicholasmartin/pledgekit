@@ -1,11 +1,9 @@
 import { getSession } from '@/lib/server-auth'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
-import { Card } from '@/components/ui/card'
-import { ProjectsClient } from '@/components/dashboard/projects/projects-client'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { CompanyDashboard } from './components/company-dashboard'
 
-export default async function CompanyDashboard() {
+export default async function Page() {
   const session = await getSession()
   const supabase = createServerComponentClient({ cookies })
 
@@ -22,11 +20,24 @@ export default async function CompanyDashboard() {
     return <div>You must be part of a company to view this dashboard.</div>
   }
 
+  // Get company details including slug
+  const { data: company } = await supabase
+    .from('companies')
+    .select('id, name, slug')
+    .eq('id', companyMember.company_id)
+    .single()
+
+  if (!company) {
+    return <div>Company not found.</div>
+  }
+
   // Get all published projects for the company
   const { data: projects } = await supabase
     .from('projects')
     .select(`
-      *,
+      id,
+      title,
+      status,
       pledge_options (
         id,
         title,
@@ -38,43 +49,8 @@ export default async function CompanyDashboard() {
     .eq('status', 'published')
     .order('created_at', { ascending: false })
 
-  const activeProjectsCount = projects?.length || 0
-
-  return (
-    <div className="space-y-6 max-w-[1200px]">
-      <DashboardHeader
-        heading="Company Dashboard"
-        text="Manage your projects and view pledge statistics."
-      />
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <div className="p-6">
-            <h3 className="font-semibold">Active Projects</h3>
-            <p className="mt-2 text-3xl font-bold">{activeProjectsCount}</p>
-          </div>
-        </Card>
-        <Card>
-          <div className="p-6">
-            <h3 className="font-semibold">Total Pledges</h3>
-            {/* Add pledge stats */}
-          </div>
-        </Card>
-        <Card>
-          <div className="p-6">
-            <h3 className="font-semibold">Completion Rate</h3>
-            {/* Add completion stats */}
-          </div>
-        </Card>
-        <Card>
-          <div className="p-6">
-            <h3 className="font-semibold">User Engagement</h3>
-            {/* Add engagement stats */}
-          </div>
-        </Card>
-      </div>
-
-      
-    </div>
-  )
+  return <CompanyDashboard 
+    companySlug={company.slug} 
+    projects={projects || []} 
+  />
 }

@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ProjectDetailsForm } from "./project-details-form"
 import { PledgeOptionsForm } from "./pledge-options-form"
 import { PledgeBenefitsForm } from "./pledge-benefits-form"
+import { ProjectCannyPosts } from "./project-canny-posts"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from "react"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
@@ -89,13 +90,16 @@ export function ProjectFormTabs({ companyId, project: initialProject }: ProjectF
   return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="details">Project Details</TabsTrigger>
           <TabsTrigger value="options" disabled={isTabDisabled("options")}>
             Pledge Options
           </TabsTrigger>
           <TabsTrigger value="benefits" disabled={isTabDisabled("benefits")}>
             Pledge Benefits
+          </TabsTrigger>
+          <TabsTrigger value="canny-posts" disabled={isTabDisabled("canny-posts")}>
+            Canny Posts
           </TabsTrigger>
         </TabsList>
         <TabsContent value="details" className="space-y-4">
@@ -115,6 +119,9 @@ export function ProjectFormTabs({ companyId, project: initialProject }: ProjectF
         </TabsContent>
         <TabsContent value="benefits" className="space-y-4">
           {projectId && <PledgeBenefitsForm projectId={projectId} />}
+        </TabsContent>
+        <TabsContent value="canny-posts" className="space-y-4">
+          {projectId && <ProjectCannyPosts projectId={projectId} />}
         </TabsContent>
       </Tabs>
 
