@@ -55,24 +55,16 @@ export function NavigationSidebar({ navigation }: NavigationSidebarProps) {
 
   return (
     <div className="flex h-screen w-64 flex-col border-r bg-background">
-      {/* Logo */}
-      <div className="flex h-14 items-center border-b px-4">
-        <Link href="/" className="flex items-center gap-2 font-semibold">
-          PledgeKit
-        </Link>
-      </div>
-
       {/* Main Navigation */}
-      <div className="flex-1 space-y-4 p-4">
+      <div className="flex-1 p-4">
         <nav className="flex flex-col gap-1">
           {navigation.mainItems.map((item) => (
             <NavLink key={item.href} item={item} />
           ))}
         </nav>
       </div>
-
-      {/* Bottom Navigation */}
-      <div className="border-t p-4">
+      {/* Bottom Navigation - Fixed */}
+      <div className="border-t p-4 bg-background">
         <nav className="flex flex-col gap-1">
           {navigation.bottomItems.map((item) => (
             <NavLink key={item.href} item={item} />
