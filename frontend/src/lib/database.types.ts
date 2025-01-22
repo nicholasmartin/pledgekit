@@ -1,4 +1,3 @@
-
 export type Json =
   | string
   | number
@@ -99,6 +98,35 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      canny_posts: {
+        Row: {
+          id: string
+          canny_post_id: string
+          project_id: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          canny_post_id: string
+          project_id?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          canny_post_id?: string
+          project_id?: string | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "canny_posts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
