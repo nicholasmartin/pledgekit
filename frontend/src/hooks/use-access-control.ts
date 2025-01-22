@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { Database } from '@/lib/database.types'
+import { useEffect, useState, useCallback } from "react"
+import { useRouter } from "next/navigation"
+import { useSupabase } from "@/lib/supabase/hooks"
+import type { Database } from "@/lib/database.types"
 
 export enum UserType {
   COMPANY_MEMBER = 'company_member',
@@ -22,29 +22,41 @@ interface UseAccessControlReturn {
 }
 
 export function useAccessControl(): UseAccessControlReturn {
-  const supabase = createClientComponentClient<Database>()
   const router = useRouter()
+  const supabase = useSupabase()
   const [userType, setUserType] = useState<UserType | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
-  const [session, setSession] = useState<any>(null)
 
   useEffect(() => {
     const getSession = async () => {
-      const { data: { session: currentSession } } = await supabase.auth.getSession()
-      setSession(currentSession)
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session?.user) {
+        setUserType(null)
+        setIsLoading(false)
+        return
+      }
+
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser()
+        
+        if (error) throw error
+        
+        const userMetadata = user?.user_metadata as UserMetadata
+        setUserType(userMetadata?.user_type || null)
+      } catch (e) {
+        setError(e instanceof Error ? e : new Error('Failed to fetch user type'))
+      } finally {
+        setIsLoading(false)
+      }
     }
     
     getSession()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession)
-    })
-
-    return () => subscription.unsubscribe()
   }, [supabase])
 
-  const refreshUserType = useCallback(async () => {
+  const refreshUserType = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
     if (!session?.user) {
       setUserType(null)
       setIsLoading(false)
@@ -63,11 +75,7 @@ export function useAccessControl(): UseAccessControlReturn {
     } finally {
       setIsLoading(false)
     }
-  }, [session?.user, supabase.auth])
-
-  useEffect(() => {
-    refreshUserType()
-  }, [refreshUserType])
+  }
 
   const isAuthorized = useCallback((requiredType?: UserType): boolean => {
     if (!requiredType) return true

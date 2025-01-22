@@ -1,17 +1,18 @@
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs"
+import { createServer } from "@/lib/supabase/server"
 import { cookies } from "next/headers"
 import { notFound } from "next/navigation"
 import { ProjectDetail } from "@/components/companies/project-detail"
 
 interface Props {
   params: {
+    slug: string
     company: string
     id: string
   }
 }
 
 export default async function ProjectDetailPage({ params }: Props) {
-  const supabase = createServerComponentClient({ cookies })
+  const supabase = createServer()
 
   // Get company by slug
   const { data: company } = await supabase

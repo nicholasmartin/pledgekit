@@ -1,9 +1,25 @@
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { Database } from './database.types'
 
+export function createServerSupabase() {
+  const cookieStore = cookies()
+
+  return createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value
+        },
+      },
+    }
+  )
+}
+
 export async function getUserType() {
-  const supabase = createServerComponentClient<Database>({ cookies })
+  const supabase = createServerSupabase()
   const { data: { user } } = await supabase.auth.getUser()
   
   if (!user) return null
@@ -22,11 +38,11 @@ export async function getUserType() {
       .single()
 
     if (companyMember) {
-      return 'company_member'
+      return 'company'
     }
 
-    // If not a company member, they are a public user
-    return 'public_user'
+    // If not a company member, default to regular user
+    return 'user'
   } catch (error) {
     console.error('Error checking user type:', error)
     return null

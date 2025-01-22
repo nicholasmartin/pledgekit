@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import { supabase } from "@/lib/supabase"
 import {
   Table,
   TableBody,
@@ -80,11 +80,12 @@ export default function FeatureRequestsPage() {
   const [sortField, setSortField] = useState<SortField>("score")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
   const [allPosts, setAllPosts] = useState<CannyPost[]>([])
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null)
   const { toast } = useToast()
-  const supabase = createClientComponentClient()
 
   // Use SWR for boards
-  const { data: boardsData, error: boardsError } = useSWR(
+  const { data: boardsData, error: boardsError, mutate: mutateBoards } = useSWR(
     "/api/canny/boards",
     fetcher,
     {
@@ -96,7 +97,6 @@ export default function FeatureRequestsPage() {
 
   const boards = boardsData?.boards || []
   const totalPostCount = useMemo(() => boards.reduce((total: number, board: CannyBoard) => total + board.postCount, 0), [boards])
-  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(boardsData?.lastSyncedAt || null)
 
   // Update lastSyncedAt when boardsData changes
   useEffect(() => {
@@ -215,6 +215,9 @@ export default function FeatureRequestsPage() {
   }, [allPosts, selectedBoards, selectedStatuses, sortField, sortDirection])
 
   const syncPosts = async () => {
+    if (isSyncing) return // Prevent multiple syncs
+    
+    setIsSyncing(true)
     try {
       const response = await fetch("/api/canny/sync", {
         method: "POST"
@@ -224,7 +227,16 @@ export default function FeatureRequestsPage() {
         throw new Error("Failed to sync posts")
       }
 
-      await mutatePosts()
+      // Update lastSyncedAt immediately
+      const now = new Date().toISOString()
+      setLastSyncedAt(now)
+
+      // Mutate both posts and boards data
+      await Promise.all([
+        mutatePosts(),
+        mutateBoards()
+      ])
+
       toast({
         title: "Success",
         description: "Posts synced successfully",
@@ -235,6 +247,8 @@ export default function FeatureRequestsPage() {
         description: error instanceof Error ? error.message : "Failed to sync posts",
         variant: "destructive",
       })
+    } finally {
+      setIsSyncing(false)
     }
   }
 
@@ -374,9 +388,14 @@ export default function FeatureRequestsPage() {
             <Button 
               onClick={syncPosts} 
               className="flex items-center gap-2"
+              disabled={isSyncing}
             >
-              <RefreshCw className="h-4 w-4" />
-              Sync Posts
+              {isSyncing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              {isSyncing ? "Syncing..." : "Sync Posts"}
             </Button>
             {lastSyncedAt && (
               <span className="text-sm text-muted-foreground">
@@ -546,22 +565,21 @@ export default function FeatureRequestsPage() {
               .eq("id", projectId)
               .single()
 
-            if (!projectData) throw new Error("Project not found")
+            if (!projectData) {
+              throw new Error('Project not found')
+            }
 
-            // Optimistically update the UI
-            setAllPosts(prevPosts => 
-              prevPosts.map(post => 
-                selectedPosts.includes(post.canny_post_id)
-                  ? {
-                      ...post,
-                      project: {
-                        id: projectData.id,
-                        title: projectData.title
-                      }
-                    }
-                  : post
-              )
-            )
+            // Optimistically update the local data
+            const updatedPosts = allPosts.map(post => {
+              if (selectedPosts.includes(post.canny_post_id)) {
+                return {
+                  ...post,
+                  project: projectData
+                }
+              }
+              return post
+            })
+            setAllPosts(updatedPosts)
 
             // Make the actual update
             const { data, error } = await supabase

@@ -11,7 +11,7 @@ interface ProjectCardProps {
   project: {
     id: string
     title: string
-    description: string
+    description: string | null
     goal: number
     amount_pledged: number
     end_date: string
@@ -49,7 +49,7 @@ export function ProjectCard({ project, companySlug }: ProjectCardProps) {
             </Link>
           </CardTitle>
           <p className="line-clamp-2 text-sm text-muted-foreground">
-            {project.description}
+            {project.description || "No description available"}
           </p>
         </CardHeader>
         

@@ -1,21 +1,29 @@
-import { cookies } from "next/headers"
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs"
+import { createServer } from "@/lib/supabase/server"
 import { ProjectsClient } from "@/components/dashboard/projects/projects-client"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { PlusIcon } from "lucide-react"
+import { getSession } from "@/lib/server-auth"
+import { redirect } from "next/navigation"
 
 export default async function ProjectsPage() {
-  const supabase = createServerComponentClient({ cookies })
+  const session = await getSession()
+  if (!session?.user) {
+    redirect('/login')
+  }
   
-  const { data: { user } } = await supabase.auth.getUser()
+  const supabase = createServer()
   
   // Get the company_id for the current user from company_members table
-  const { data: companyMember, error: companyError } = await supabase
+  const { data: companyMember, error: memberError } = await supabase
     .from("company_members")
     .select("company_id")
-    .eq("user_id", user?.id)
+    .eq("user_id", session.user.id)
     .single()
+
+  if (memberError || !companyMember) {
+    return <div>You must be part of a company to view projects.</div>
+  }
 
   // Get all projects for the company
   const { data: projects, error: projectsError } = await supabase
@@ -29,8 +37,12 @@ export default async function ProjectsPage() {
         benefits
       )
     `)
-    .eq("company_id", companyMember?.company_id)
+    .eq("company_id", companyMember.company_id)
     .order("created_at", { ascending: false })
+
+  if (projectsError) {
+    return <div>Failed to load projects. Please try again later.</div>
+  }
 
   return (
     <div className="space-y-4">

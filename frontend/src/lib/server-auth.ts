@@ -1,4 +1,4 @@
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { cache } from 'react'
 import { Database } from './database.types'
@@ -23,7 +23,18 @@ export type UserDetails = {
  * Get the current session, cached for the request
  */
 export const getSession = cache(async () => {
-  const supabase = createServerComponentClient<Database>({ cookies })
+  const cookieStore = cookies()
+  const supabase = createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value
+        },
+      },
+    }
+  )
   try {
     const { data: { session }, error } = await supabase.auth.getSession()
     if (error) throw error
@@ -41,7 +52,18 @@ export const getUserDetails = cache(async (): Promise<UserDetails | null> => {
   const session = await getSession()
   if (!session?.user) return null
 
-  const supabase = createServerComponentClient<Database>({ cookies })
+  const cookieStore = cookies()
+  const supabase = createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value
+        },
+      },
+    }
+  )
   try {
     // Get company membership details
     const { data: membership, error } = await supabase
@@ -74,7 +96,18 @@ export const hasCompanyAccess = cache(async (companyId: string): Promise<boolean
   const session = await getSession()
   if (!session?.user) return false
 
-  const supabase = createServerComponentClient<Database>({ cookies })
+  const cookieStore = cookies()
+  const supabase = createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value
+        },
+      },
+    }
+  )
   try {
     const { data: membership, error } = await supabase
       .from('company_members')

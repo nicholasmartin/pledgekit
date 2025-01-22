@@ -7,11 +7,12 @@ import {
 } from "@/components/ui/card"
 import { DollarSign, Users, LineChart, Rocket } from "lucide-react"
 import { cookies } from "next/headers"
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs"
+import { createServer } from "@/lib/supabase/server"
+import { redirect } from "next/navigation"
 import { DashboardClient } from "@/components/dashboard/dashboard-client"
 
 export default async function DashboardPage() {
-  const supabase = createServerComponentClient({ cookies })
+  const supabase = createServer()
   
   const { data: { user } } = await supabase.auth.getUser()
   

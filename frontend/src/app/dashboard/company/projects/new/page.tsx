@@ -1,20 +1,24 @@
-import { cookies } from "next/headers"
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs"
+import { createServer } from "@/lib/supabase/server"
 import { ProjectFormTabs } from "@/components/dashboard/projects/project-form-tabs"
+import { getSession } from "@/lib/server-auth"
+import { redirect } from "next/navigation"
 
 export default async function NewProjectPage() {
-  const supabase = createServerComponentClient({ cookies })
+  const session = await getSession()
+  if (!session?.user) {
+    redirect('/login')
+  }
   
-  const { data: { user } } = await supabase.auth.getUser()
-  
+  const supabase = createServer()
+
   // Get the company_id for the current user
-  const { data: companyMember } = await supabase
+  const { data: companyMember, error: memberError } = await supabase
     .from("company_members")
     .select("company_id")
-    .eq("user_id", user?.id)
+    .eq("user_id", session.user.id)
     .single()
 
-  if (!companyMember) {
+  if (memberError || !companyMember?.company_id) {
     return <div>You must be part of a company to create projects.</div>
   }
 

@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Loader2, Search } from "lucide-react"
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import { useRouter } from "next/navigation"
+import { useSupabase } from "@/lib/supabase/hooks"
 import { useToast } from "@/components/ui/use-toast"
 
 interface Project {
@@ -28,12 +29,13 @@ export function SelectProjectDialog({
   onOpenChange,
   onProjectSelect,
 }: SelectProjectDialogProps) {
+  const router = useRouter()
+  const supabase = useSupabase()
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedProjectId, setSelectedProjectId] = useState<string>("")
   const [projects, setProjects] = useState<Project[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const supabase = createClientComponentClient()
   const { toast } = useToast()
 
   // Load projects when dialog opens

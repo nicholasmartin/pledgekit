@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import { createBrowserClient } from "@supabase/ssr"
 import {
   Card,
   CardContent,
@@ -54,7 +54,10 @@ interface ProjectsClientProps {
 
 export function ProjectsClient({ projects, limit }: ProjectsClientProps) {
   const router = useRouter()
-  const supabase = createClientComponentClient()
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null)
 
   const handleDeleteProject = async () => {

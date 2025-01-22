@@ -2,7 +2,8 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import { useEffect, useState } from "react"
+import { useSupabase } from "@/lib/supabase/hooks"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
@@ -57,7 +58,7 @@ interface ProjectFormProps {
 
 export function ProjectForm({ companyId, project }: ProjectFormProps) {
   const router = useRouter()
-  const supabase = createClientComponentClient()
+  const supabase = useSupabase()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const form = useForm<z.infer<typeof projectFormSchema>>({

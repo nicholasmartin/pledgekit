@@ -1,4 +1,4 @@
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import { RateLimiter } from "limiter"
@@ -27,33 +27,61 @@ export function validatePagination(limit?: number | null, skip?: number): CannyE
 
 // Get authenticated company context
 export async function getCompanyContext() {
-  const supabase = createRouteHandlerClient({ cookies })
+  const cookieStore = cookies()
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          try {
+            cookieStore.set({ name, value, ...options })
+          } catch (error) {
+            // Handle edge cases where cookies cannot be set
+            console.error('Error setting cookie:', error)
+          }
+        },
+        remove(name: string, options: CookieOptions) {
+          try {
+            cookieStore.set({ name, value: '', ...options })
+          } catch (error) {
+            // Handle edge cases where cookies cannot be removed
+            console.error('Error removing cookie:', error)
+          }
+        },
+      },
+    }
+  )
 
   // Check if user is authenticated
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError || !user) {
     throw { message: "Unauthorized", status: 401 }
   }
 
   // Get user's company
-  const { data: companyMember } = await supabase
+  const { data: companyMember, error: companyError } = await supabase
     .from("company_members")
     .select("company_id")
     .eq("user_id", user.id)
     .single()
 
-  if (!companyMember) {
+  if (companyError || !companyMember) {
     throw { message: "Company not found", status: 404 }
   }
 
   // Get company's Canny API key
-  const { data: settings } = await supabase
+  const { data: settings, error: settingsError } = await supabase
     .from("company_settings")
     .select("canny_api_key")
     .eq("company_id", companyMember.company_id)
     .single()
 
-  if (!settings?.canny_api_key) {
+  if (settingsError || !settings?.canny_api_key) {
     throw { message: "Canny API key not found", status: 404 }
   }
 

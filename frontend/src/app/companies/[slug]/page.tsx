@@ -5,6 +5,7 @@ import { useEffect, useState } from "react"
 import { CompanyHeader } from "@/components/companies/company-header"
 import { ProjectCard } from "@/components/companies/project-card"
 import { useInView } from "react-intersection-observer"
+import { CompanyProjects } from "@/components/companies/company-projects"
 
 interface Company {
   id: string
@@ -25,12 +26,12 @@ interface Project {
   company_slug: string
 }
 
-export default function CompanyPage({ params }: { params: { slug: string } }) {
+export default function CompanyPage({ params, initialProjects }: { params: { slug: string }, initialProjects: Project[] }) {
   const [company, setCompany] = useState<Company | null>(null)
-  const [projects, setProjects] = useState<Project[]>([])
+  const [projects, setProjects] = useState<Project[]>(initialProjects)
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(true)
-  const [page, setPage] = useState(0)
+  const [page, setPage] = useState(1)
   const supabase = createClientComponentClient()
   const { ref, inView } = useInView()
 
@@ -69,8 +70,8 @@ export default function CompanyPage({ params }: { params: { slug: string } }) {
 
     try {
       setLoading(true)
-      const from = page * 6
-      const to = from + 5
+      const from = page * 10
+      const to = from + 9
 
       console.log("Fetching projects for company:", company.id, "range:", from, "to", to)
       const { data, error } = await supabase
@@ -93,7 +94,7 @@ export default function CompanyPage({ params }: { params: { slug: string } }) {
       }))
 
       console.log("Projects data received:", projectsWithSlug)
-      if (data.length < 6) {
+      if (data.length < 10) {
         setHasMore(false)
       }
 
@@ -128,15 +129,10 @@ export default function CompanyPage({ params }: { params: { slug: string } }) {
       <CompanyHeader company={company} />
       
       <main className="container py-8">
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project) => (
-            <ProjectCard 
-              key={project.id} 
-              project={project} 
-              companySlug={params.slug}
-            />
-          ))}
-        </div>
+        <CompanyProjects 
+          companyId={company.id} 
+          initialProjects={projects} 
+        />
         
         {hasMore && (
           <div

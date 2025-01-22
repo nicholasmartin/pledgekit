@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     const rateLimitError = await checkRateLimit()
     if (rateLimitError) return errorResponse(rateLimitError)
 
-    const { sortBy = "score", sortDirection = "desc" } = await request.json()
+    const { sortBy = "score", sortDirection = "desc", postIds } = await request.json()
     
     // Validate parameters
     if (sortBy && !["score", "comment_count", "created_at"].includes(sortBy)) {
@@ -32,7 +32,6 @@ export async function POST(request: Request) {
       .limit(1)
       .single()
 
-    // Build query
     let query = supabase
       .from("canny_posts")
       .select(`
@@ -43,6 +42,11 @@ export async function POST(request: Request) {
         )
       `)
       .eq("company_id", companyId)
+
+    // Filter by specific post IDs if provided
+    if (postIds?.length) {
+      query = query.in("canny_post_id", postIds)
+    }
 
     // Apply sorting
     const sortField = sortBy === "score" ? "score" : 

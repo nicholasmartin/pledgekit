@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useSupabase } from "@/lib/supabase/hooks"
 import {
   Table,
   TableBody,
@@ -13,7 +14,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { Loader2, Plus } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 
@@ -33,7 +33,7 @@ interface ProjectCannyPostsProps {
 
 export function ProjectCannyPosts({ projectId }: ProjectCannyPostsProps) {
   const router = useRouter()
-  const supabase = createClientComponentClient()
+  const supabase = useSupabase()
   const { toast } = useToast()
   const [posts, setPosts] = useState<CannyPost[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -45,14 +45,36 @@ export function ProjectCannyPosts({ projectId }: ProjectCannyPostsProps) {
   const loadPosts = async () => {
     setIsLoading(true)
     try {
-      const { data, error } = await supabase
+      // First get the Canny post IDs from Supabase
+      const { data: supabasePosts, error } = await supabase
         .from("canny_posts")
         .select("*")
         .eq("project_id", projectId)
 
       if (error) throw error
 
-      setPosts(data || [])
+      if (!supabasePosts?.length) {
+        setPosts([])
+        return
+      }
+
+      // Then fetch the complete Canny post data from our API
+      const response = await fetch("/api/canny/posts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          postIds: supabasePosts.map(post => post.canny_post_id)
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch Canny posts")
+      }
+
+      const cannyPosts = await response.json()
+      setPosts(cannyPosts)
     } catch (error) {
       console.error("Error loading posts:", error)
       toast({

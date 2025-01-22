@@ -1,14 +1,14 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { useSupabase } from '@/lib/supabase/hooks'
 import { NavigationSidebar } from './navigation-sidebar'
 import { userNavigation, companyNavigation } from "@/config/navigation"
 import { UserType } from "@/types/auth"
 
 export function NavigationWrapper() {
   const [navigation, setNavigation] = useState(userNavigation)
-  const supabase = createClientComponentClient()
+  const supabase = useSupabase()
 
   useEffect(() => {
     const getNavigation = async () => {

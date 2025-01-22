@@ -13,7 +13,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import { useSupabase } from "@/lib/supabase/hooks"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -36,7 +36,7 @@ interface PledgeOption {
 
 export function PledgeBenefitsForm({ projectId }: PledgeBenefitsFormProps) {
   const router = useRouter()
-  const supabase = createClientComponentClient()
+  const supabase = useSupabase()
   const [pledgeOptions, setPledgeOptions] = useState<PledgeOption[]>([])
   const [selectedOption, setSelectedOption] = useState<string | null>(null)
 
@@ -69,8 +69,14 @@ export function PledgeBenefitsForm({ projectId }: PledgeBenefitsFormProps) {
 
     setPledgeOptions(
       data.map((option) => ({
-        ...option,
-        benefits: option.benefits || [],
+        id: option.id,
+        title: option.title,
+        amount: option.amount,
+        benefits: Array.isArray(option.benefits) 
+          ? option.benefits.map(b => String(b))
+          : option.benefits 
+            ? [String(option.benefits)]
+            : []
       }))
     )
 

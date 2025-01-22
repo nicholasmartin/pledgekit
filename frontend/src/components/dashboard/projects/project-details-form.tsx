@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
 import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
 import {
   Form,
   FormControl,
@@ -22,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import { useSupabase } from "@/lib/supabase/hooks"
 import { useRouter } from "next/navigation"
 
 const projectDetailsSchema = z.object({
@@ -57,7 +58,7 @@ interface ProjectDetailsFormProps {
 
 export function ProjectDetailsForm({ companyId, project, onSave }: ProjectDetailsFormProps) {
   const router = useRouter()
-  const supabase = createClientComponentClient()
+  const supabase = useSupabase()
 
   const form = useForm<z.infer<typeof projectDetailsSchema>>({
     resolver: zodResolver(projectDetailsSchema),

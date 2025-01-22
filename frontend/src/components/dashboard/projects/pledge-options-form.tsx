@@ -1,12 +1,13 @@
 "use client"
 
+import { useFieldArray, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
 import * as z from "zod"
 import { Button } from "@/components/ui/button"
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -14,7 +15,9 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import { useToast } from "@/components/ui/use-toast"
+import { Separator } from "@/components/ui/separator"
+import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -42,7 +45,6 @@ interface PledgeOption {
 
 export function PledgeOptionsForm({ projectId, onSave }: PledgeOptionsFormProps) {
   const router = useRouter()
-  const supabase = createClientComponentClient()
   const [pledgeOptions, setPledgeOptions] = useState<PledgeOption[]>([])
   const [isEditing, setIsEditing] = useState(false)
 
