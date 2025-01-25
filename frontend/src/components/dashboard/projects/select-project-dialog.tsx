@@ -59,7 +59,15 @@ export function SelectProjectDialog({
 
       if (error) throw error
 
-      setProjects(data || [])
+      // Validate and transform the data to ensure it matches Project type
+      const validProjects = (data || []).filter((project): project is Project => {
+        return project.status === "draft" || 
+               project.status === "published" || 
+               project.status === "completed" || 
+               project.status === "cancelled";
+      });
+
+      setProjects(validProjects)
     } catch (error) {
       console.error("Error loading projects:", error)
       toast({

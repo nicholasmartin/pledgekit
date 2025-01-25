@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { Database, RPCFunction } from './database.types';
+import { Database } from './database.types';
 
 export enum UserRole {
   COMPANY_OWNER = 'company_owner',

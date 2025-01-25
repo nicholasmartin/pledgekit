@@ -89,9 +89,15 @@ export default function CompanyPage({ params, initialProjects }: { params: { slu
 
       // Transform the data to include company_slug
       const projectsWithSlug = data.map(project => ({
-        ...project,
+        id: project.id,
+        title: project.title,
+        description: project.description,
+        goal: project.goal,
+        amount_pledged: project.amount_pledged,
+        end_date: project.end_date,
+        header_image_url: project.header_image_url,
         company_slug: project.companies.slug
-      }))
+      } satisfies Project))
 
       console.log("Projects data received:", projectsWithSlug)
       if (data.length < 10) {

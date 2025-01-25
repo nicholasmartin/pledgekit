@@ -8,109 +8,118 @@ This document outlines the plan to refactor the PledgeKit frontend to fully util
 2. Inconsistent usage of Supabase client initialization
 3. Duplicate authentication logic across components
 4. Mixed usage of old and new Supabase SSR approaches
+5. Using deprecated `@supabase/auth-helpers-nextjs` package
 
-## Refactoring Plan
+## Migration Steps
 
-### 1. Core Infrastructure Updates
+### 1. Package Updates
+```bash
+npm uninstall @supabase/auth-helpers-nextjs
+npm install @supabase/ssr
+```
+
+### 2. Core Infrastructure Updates
 
 #### Create New Utility Files
 ```typescript
-// src/lib/supabase-server.ts
-- Create centralized server-side Supabase client creation
-- Implement caching mechanisms for performance
-- Add type safety for database operations
+// src/lib/supabase/client.ts
+import { createBrowserClient } from '@supabase/ssr'
 
-// src/lib/supabase-client.ts
-- Create centralized browser-side Supabase client creation
-- Handle client-side authentication flows
+export function createClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
+
+// src/lib/supabase/server.ts
+import { cookies } from 'next/headers'
+import { createServerClient } from '@supabase/ssr'
+
+export async function createClient() {
+  const cookieStore = cookies()
+  
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value
+        },
+        set(name: string, value: string, options: any) {
+          cookieStore.set({ name, value, ...options })
+        },
+        remove(name: string, options: any) {
+          cookieStore.set({ name, value: '', ...options })
+        },
+      },
+    }
+  )
+}
 ```
 
-#### Update Existing Files
-- `src/lib/server-auth.ts`: Enhance to be single source of truth for server-side auth
-- `src/lib/auth-context.tsx`: Update to use new SSR approach
-- `src/middleware.ts`: Review and update authentication middleware
-
-### 2. Component Updates
-
-#### Server Components to Update
-1. Dashboard Pages:
-   - `/dashboard/company/projects/page.tsx`
-   - `/dashboard/company/projects/[id]/edit/page.tsx`
-   - `/dashboard/company/projects/new/page.tsx`
-   - `/dashboard/company/page.tsx`
-   - `/dashboard/company/settings/page.tsx`
-   - `/dashboard/page.tsx`
-   - `/dashboard/user/page.tsx`
-
-2. Company/Project Pages:
-   - `/companies/[slug]/[company]/projects/[id]/page.tsx`
-   - `/companies/[slug]/projects/[id]/page.tsx`
-   - `/companies/[slug]/page.tsx`
-
-3. Other Pages:
-   - `/settings/page.tsx`
-   - `/profile/page.tsx`
-
-### 3. Authentication Flow Updates
-
-#### Client-Side Changes
-1. Update `AuthProvider` component:
-   - Remove direct Supabase client creation
-   - Use new centralized utilities
-   - Implement proper error handling
-
-2. Update `AuthListener` component:
-   - Migrate to new SSR authentication pattern
-   - Ensure proper session management
-
-### 4. Database Operations
-
-#### Create Typed Database Utilities
+#### Update Middleware
+Update `src/middleware.ts` to handle auth token refresh and cookie management:
 ```typescript
-// src/lib/db-types.ts
-- Define proper TypeScript types for all database operations
-- Create typed helper functions for common queries
+import { type NextRequest } from 'next/server'
+import { updateSession } from '@/lib/supabase/middleware'
+
+export async function middleware(request: NextRequest) {
+  return await updateSession(request)
+}
+
+export const config = {
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
+}
 ```
 
-### 5. Testing Requirements
+### 3. Files to Update
 
-1. Authentication Flows:
-   - Test sign in/sign out flows
-   - Verify session persistence
-   - Check protected route access
+#### Client Components (using createBrowserClient)
+1. `src/components/dashboard/projects/project-form-tabs.tsx`
+2. `src/app/settings/page.tsx`
+3. `src/app/profile/page.tsx`
+4. `src/app/companies/[slug]/page.tsx`
 
-2. Data Operations:
-   - Verify all CRUD operations work with new utilities
-   - Test error handling
-   - Validate type safety
+#### API Routes (using createServerClient)
+1. `src/app/api/checkout/route.ts`
+2. `src/app/api/canny/posts/route.ts`
+3. `src/app/api/canny/posts/[id]/route.ts`
 
-### 6. Implementation Steps
+### 4. Important Security Notes
+1. Always use `supabase.auth.getUser()` to protect pages and user data - never trust `supabase.auth.getSession()`
+2. Call `cookies()` before any Supabase calls in Server Components to opt out of Next.js caching
+3. Update email templates in Supabase dashboard to use the new confirmation URL format:
+   - Change `{{ .ConfirmationURL }}` to `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup`
 
-1. **Phase 1: Infrastructure**
-   - Create new utility files
-   - Update core authentication files
-   - Set up type system
+## Progress Tracking
 
-2. **Phase 2: Server Components**
-   - Update dashboard pages
-   - Update company/project pages
-   - Update other server components
+### Completed
+- [ ] Package updates
+- [ ] Core infrastructure setup
+- [ ] Middleware updates
+- [ ] Email template updates
 
-3. **Phase 3: Client Components**
-   - Update authentication components
-   - Migrate client-side data fetching
+### Components to Migrate
+- [ ] `src/components/dashboard/projects/project-form-tabs.tsx`
+- [ ] `src/app/settings/page.tsx`
+- [ ] `src/app/profile/page.tsx`
+- [ ] `src/app/companies/[slug]/page.tsx`
 
-4. **Phase 4: Testing & Validation**
-   - Run comprehensive tests
-   - Verify all flows work as expected
-   - Performance testing
+### API Routes to Migrate
+- [ ] `src/app/api/checkout/route.ts`
+- [ ] `src/app/api/canny/posts/route.ts`
+- [ ] `src/app/api/canny/posts/[id]/route.ts`
 
-### 7. Migration Considerations
-
-- Maintain backward compatibility during migration
-- Consider implementing feature flags
-- Plan for rollback scenarios
-- Document all changes thoroughly
+## Post-Migration Cleanup
+1. Verify all auth flows (signup, login, password reset)
+2. Test protected routes and API endpoints
+3. Verify session handling and token refresh
+4. Remove any remaining references to `@supabase/auth-helpers-nextjs`
+5. Update types and interfaces to match new SSR patterns
 
 ## Centralized Supabase Client Creation
 
@@ -165,7 +174,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import type { Database } from './database.types'
 
-export function createServer() {
+export async function createServer() {
   const cookieStore = cookies()
   
   return createServerClient<Database>(
@@ -175,6 +184,12 @@ export function createServer() {
       cookies: {
         get(name: string) {
           return cookieStore.get(name)?.value
+        },
+        set(name: string, value: string, options: any) {
+          cookieStore.set({ name, value, ...options })
+        },
+        remove(name: string, options: any) {
+          cookieStore.set({ name, value: '', ...options })
         },
       },
     }
