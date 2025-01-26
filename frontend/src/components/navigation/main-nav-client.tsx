@@ -15,7 +15,7 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import type { UserDetails } from "@/lib/server-auth"
+import type { UserDetails } from '@/types/external/supabase'
 import { NotificationsMenu } from "./notifications-menu"
 import { LogoutButton } from "@/components/auth/logout-button"
 

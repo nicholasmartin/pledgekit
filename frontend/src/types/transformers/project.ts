@@ -52,7 +52,11 @@ export function toProjectWithPledges(
       id: option.id,
       title: option.title,
       amount: option.amount,
-      benefits: option.benefits || []
+      benefits: Array.isArray(option.benefits) 
+        ? option.benefits.map(b => String(b))
+        : option.benefits 
+          ? [String(option.benefits)]
+          : []
     })) || []
   }
 }
