@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { getCompanyContext, errorResponse } from "../../utils"
-import { Database } from "@/lib/database.types"
+import { Database } from "@/types/generated/database"
 
 type CannyPost = Database['public']['Tables']['canny_posts']['Row']
 

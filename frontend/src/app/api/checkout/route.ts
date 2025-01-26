@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createServer } from '@/lib/supabase/server'
 import { stripe } from '@/lib/stripe'
-import { Database } from '@/lib/database.types'
+import { Database } from '@/types/generated/database'
 
 export const dynamic = 'force-dynamic'
 

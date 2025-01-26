@@ -1,5 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
-import { Database } from './database.types';
+import { createClient } from '@supabase/supabase-js'
+import { Database } from '@/types/generated/database'
 
 export enum UserRole {
   COMPANY_OWNER = 'company_owner',

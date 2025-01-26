@@ -1,0 +1,43 @@
+name: Update Types
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/**'
+      - 'schema.sql'
+  workflow_dispatch:
+
+jobs:
+  update-types:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: Install Dependencies
+        run: npm ci
+        working-directory: ./frontend
+        
+      - name: Generate Types
+        run: |
+          npx supabase gen types typescript \
+            --project-id ${{ secrets.SUPABASE_PROJECT_ID }} \
+            --schema public \
+            > src/types/generated/database.ts
+        working-directory: ./frontend
+            
+      - name: Run Type Tests
+        run: npm run type-test
+        working-directory: ./frontend
+        
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          title: 'chore: update generated types'
+          commit-message: 'chore: update generated types'
+          branch: update-types
+          delete-branch: true

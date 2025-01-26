@@ -2,7 +2,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import { RateLimiter } from "limiter"
-import { Database } from "@/lib/database.types"
+import { Database } from "@/types/generated/database"
 import { PostgrestError } from '@supabase/supabase-js'
 
 // Rate limiter: 100 requests per minute

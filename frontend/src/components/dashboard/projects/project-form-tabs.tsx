@@ -9,7 +9,7 @@ import { ProjectDetailsForm } from "./project-details-form"
 import { PledgeOptionsForm } from "./pledge-options-form"
 import { PledgeBenefitsForm } from "./pledge-benefits-form"
 import { ProjectCannyPosts } from "./project-canny-posts"
-import type { Database } from "@/lib/database.types"
+import type { Database } from "@/types/generated/database"
 
 type Project = Database["public"]["Tables"]["projects"]["Row"]
 type ProjectStatus = "draft" | "published" | "completed" | "cancelled"

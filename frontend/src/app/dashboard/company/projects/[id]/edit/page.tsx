@@ -3,7 +3,7 @@ import { createServerSupabase } from "@/lib/server-supabase"
 import { ProjectFormTabs } from "@/components/dashboard/projects/project-form-tabs"
 import { getUser } from "@/lib/server-auth"
 import { cookies } from "next/headers"
-import type { Database } from "@/lib/database.types"
+import type { Database } from "@/types/generated/database"
 
 type ProjectStatus = Database['public']['Enums']['project_status']
 

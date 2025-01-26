@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import type { Database } from "@/lib/database.types"
+import type { Database } from "@/types/generated/database"
 import {
   Card,
   CardContent,

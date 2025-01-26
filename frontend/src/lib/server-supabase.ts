@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { cache } from 'react'
-import { Database } from './database.types'
+import { Database } from '@/types/generated/database'
 
 type UserType = 'company' | 'user'
 

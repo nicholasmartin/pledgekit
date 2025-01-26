@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import { cache } from 'react'
 import { createServerSupabase } from './server-supabase'
-import { Database } from './database.types'
+import { Database } from '@/types/generated/database'
 
 export type UserDetails = {
   user: {

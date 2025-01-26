@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useSupabase } from "@/lib/supabase/hooks"
-import type { Database } from "@/lib/database.types"
+import type { Database } from "@/types/generated/database"
 
 export enum UserType {
   COMPANY_MEMBER = 'company_member',

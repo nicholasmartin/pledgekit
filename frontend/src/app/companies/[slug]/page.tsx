@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { createClient } from "@/lib/supabase/client"
-import type { Database } from "@/lib/database.types"
+import type { Database } from "@/types/generated/database"
 import { CompanyHeader } from "@/components/companies/company-header"
 import { ProjectCard } from "@/components/companies/project-card"
 import { useInView } from "react-intersection-observer"

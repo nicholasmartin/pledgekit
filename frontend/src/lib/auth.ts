@@ -1,4 +1,4 @@
-import { UserType } from "./types/user"
+import { UserType } from "@/types/domain/user/types"
 import { supabase } from "./supabase"
 
 interface RegisterUserParams {
