@@ -1,7 +1,14 @@
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import { getCompanyContext, checkRateLimit, errorResponse, setCacheHeaders } from "../utils"
+import { Database } from "@/lib/database.types"
+
+type CannyPost = Database['public']['Tables']['canny_posts']['Row'] & {
+  projects: {
+    id: string;
+    title: string;
+  } | null;
+}
 
 export async function POST(request: Request) {
   try {
@@ -9,7 +16,11 @@ export async function POST(request: Request) {
     const rateLimitError = await checkRateLimit()
     if (rateLimitError) return errorResponse(rateLimitError)
 
-    const { sortBy = "score", sortDirection = "desc", postIds } = await request.json()
+    const { sortBy = "score", sortDirection = "desc", postIds } = await request.json() as {
+      sortBy?: "score" | "comment_count" | "created_at";
+      sortDirection?: "asc" | "desc";
+      postIds?: string[];
+    }
     
     // Validate parameters
     if (sortBy && !["score", "comment_count", "created_at"].includes(sortBy)) {
@@ -23,7 +34,7 @@ export async function POST(request: Request) {
     const { supabase, companyId } = await getCompanyContext()
 
     // Get the last sync time
-    const { data: lastSync } = await supabase
+    const { data: lastSync, error: syncError } = await supabase
       .from("canny_sync_logs")
       .select("created_at")
       .eq("company_id", companyId)
@@ -31,6 +42,10 @@ export async function POST(request: Request) {
       .order("created_at", { ascending: false })
       .limit(1)
       .single()
+
+    if (syncError) {
+      console.error("Error fetching last sync time:", syncError)
+    }
 
     let query = supabase
       .from("canny_posts")
@@ -58,7 +73,7 @@ export async function POST(request: Request) {
     if (error) throw error
 
     // Transform the data to match the expected format
-    const transformedPosts = posts.map(post => ({
+    const transformedPosts = (posts as CannyPost[]).map(post => ({
       id: post.id,
       canny_post_id: post.canny_post_id,
       title: post.title,

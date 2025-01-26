@@ -9,36 +9,15 @@ import { Textarea } from "@/components/ui/textarea"
 import { formatDistanceToNow } from "date-fns"
 import Link from "next/link"
 import ChevronLeft from "@/components/icons/chevron-left"
-
-interface Project {
-  id: string
-  title: string
-  description: string | null
-  goal: number
-  amount_pledged: number
-  end_date: string
-  header_image_url: string | null
-  status: 'draft' | 'published' | 'completed' | 'cancelled'
-  pledge_options: Array<{
-    id: string
-    title: string
-    amount: number
-    benefits: string[]
-  }>
-}
-
-interface Company {
-  id: string
-  name: string
-  slug: string
-}
+import type { Project, ProjectWithCompany } from "@/types/domain/project"
 
 interface Props {
   project: Project
-  company: Company
+  company: ProjectWithCompany['company']
+  pledgeCount: number
 }
 
-export function ProjectDetail({ project, company }: Props) {
+export function ProjectDetail({ project, company, pledgeCount }: Props) {
   const [newComment, setNewComment] = useState("")
 
   const formatCurrency = (amount: number) => {

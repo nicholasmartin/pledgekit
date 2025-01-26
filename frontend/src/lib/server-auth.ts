@@ -1,6 +1,6 @@
-import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { cache } from 'react'
+import { createServerSupabase } from './server-supabase'
 import { Database } from './database.types'
 
 export type UserDetails = {
@@ -20,72 +20,60 @@ export type UserDetails = {
 }
 
 /**
- * Get the current session, cached for the request
+ * Get the current authenticated user, cached for the request.
+ * This is the safe way to get user data on the server as it validates with Supabase Auth.
  */
-export const getSession = cache(async () => {
-  const cookieStore = cookies()
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-      },
-    }
-  )
+export const getUser = cache(async () => {
+  // Call cookies() before any Supabase calls
+  cookies()
+  const supabase = createServerSupabase()
+  
   try {
-    const { data: { session }, error } = await supabase.auth.getSession()
+    const { data: { user }, error } = await supabase.auth.getUser()
     if (error) throw error
-    return session
+    return user
   } catch (error) {
-    console.error('Error getting session:', error)
+    console.error('Error getting user:', error)
     return null
   }
 })
 
 /**
- * Get user details including company membership, cached for the request
+ * Get user details including company membership, cached for the request.
+ * This is safe to use in server components as it validates the session.
  */
 export const getUserDetails = cache(async (): Promise<UserDetails | null> => {
-  const session = await getSession()
-  if (!session?.user) return null
+  // Call cookies() before any Supabase calls
+  cookies()
+  const supabase = createServerSupabase()
 
-  const cookieStore = cookies()
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-      },
-    }
-  )
   try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    if (userError) throw userError
+    if (!user) return null
+
     // Get company membership details
-    const { data: membership, error } = await supabase
+    const { data: membership, error: membershipError } = await supabase
       .from('company_members')
       .select('role, company:companies(name)')
-      .eq('user_id', session.user.id)
+      .eq('user_id', user.id)
       .single()
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
-      console.error('Error getting membership:', error)
+    if (membershipError && membershipError.code !== 'PGRST116') {
+      throw membershipError
     }
 
     return {
-      user: session.user,
-      membership: membership || null
+      user: {
+        id: user.id,
+        email: user.email,
+        user_metadata: user.user_metadata
+      },
+      membership: membership
     }
   } catch (error) {
     console.error('Error getting user details:', error)
-    return {
-      user: session.user,
-      membership: null
-    }
+    return null
   }
 })
 
@@ -93,26 +81,15 @@ export const getUserDetails = cache(async (): Promise<UserDetails | null> => {
  * Check if the current user has access to a specific company
  */
 export const hasCompanyAccess = cache(async (companyId: string): Promise<boolean> => {
-  const session = await getSession()
-  if (!session?.user) return false
+  const user = await getUser()
+  if (!user) return false
 
-  const cookieStore = cookies()
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-      },
-    }
-  )
+  const supabase = createServerSupabase()
   try {
     const { data: membership, error } = await supabase
       .from('company_members')
       .select('id')
-      .eq('user_id', session.user.id)
+      .eq('user_id', user.id)
       .eq('company_id', companyId)
       .single()
 

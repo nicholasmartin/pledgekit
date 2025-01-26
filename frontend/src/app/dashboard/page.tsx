@@ -7,15 +7,19 @@ import {
 } from "@/components/ui/card"
 import { DollarSign, Users, LineChart, Rocket } from "lucide-react"
 import { cookies } from "next/headers"
-import { createServer } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { DashboardClient } from "@/components/dashboard/dashboard-client"
+import { getUser } from "@/lib/server-auth"
 
 export default async function DashboardPage() {
-  const supabase = createServer()
+  // Call cookies() before any Supabase calls
+  cookies()
   
-  const { data: { user } } = await supabase.auth.getUser()
-  
+  const user = await getUser()
+  if (!user) {
+    redirect('/login')
+  }
+
   return (
     <DashboardClient>
       <div className="space-y-6">

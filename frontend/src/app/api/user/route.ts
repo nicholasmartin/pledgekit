@@ -1,33 +1,41 @@
-import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { getUserDetails } from '@/lib/server-auth'
+import { createServer } from '@/lib/supabase/server'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const cookieStore = cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-        set(name: string, value: string, options: any) {
-          cookieStore.set(name, value, options)
-        },
-        remove(name: string, options: any) {
-          cookieStore.set(name, '', { ...options, maxAge: 0 })
-        }
-      }
-    }
-  )
-  
   try {
+    // Must call cookies() before any Supabase calls
+    cookies()
+    const supabase = createServer()
+
+    // First verify the user session is valid
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      console.error('Error verifying user session:', authError)
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    // Get detailed user info including company membership
     const userDetails = await getUserDetails()
+    if (!userDetails) {
+      return NextResponse.json(
+        { error: 'Failed to fetch user details' },
+        { status: 404 }
+      )
+    }
+
     return NextResponse.json(userDetails)
   } catch (error) {
-    console.error('Error fetching user details:', error)
-    return NextResponse.json(null)
+    console.error('Error in user API route:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
   }
 }

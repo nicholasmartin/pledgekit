@@ -1,33 +1,46 @@
 import { createServerSupabase } from "@/lib/server-supabase"
 import { SettingsForm } from "@/components/dashboard/company/settings-form"
+import { getUser } from "@/lib/server-auth"
+import { redirect } from "next/navigation"
+import { cookies } from "next/headers"
 
 export default async function SettingsPage() {
+  // Call cookies() before any Supabase calls
+  cookies()
+  
+  const user = await getUser()
+  if (!user) {
+    redirect('/login')
+  }
+
   const supabase = createServerSupabase()
   
-  // Get the current user and company settings server-side
-  const { data: { user } } = await supabase.auth.getUser()
+  // Get the company membership and settings
+  const { data: companyMember, error: memberError } = await supabase
+    .from("company_members")
+    .select("company_id")
+    .eq("user_id", user.id)
+    .single()
   
-  let initialSettings = {}
-  let companyId: string | undefined
-  if (user) {
-    const { data: companyMember } = await supabase
-      .from("company_members")
-      .select("company_id")
-      .eq("user_id", user.id)
-      .single()
-    
-    if (companyMember?.company_id) {
-      companyId = companyMember.company_id
-      const { data: settings } = await supabase
-        .from("company_settings")
-        .select("*")
-        .eq("company_id", companyMember.company_id)
-        .single()
-      
-      if (settings) {
-        initialSettings = settings
-      }
+  if (memberError) {
+    if (memberError.code !== 'PGRST116') {
+      console.error('Error fetching company member:', memberError)
     }
+    return <div>You must be part of a company to access settings.</div>
+  }
+
+  if (!companyMember?.company_id) {
+    return <div>No company found. Please contact support if this is unexpected.</div>
+  }
+
+  const { data: settings, error: settingsError } = await supabase
+    .from("company_settings")
+    .select("*")
+    .eq("company_id", companyMember.company_id)
+    .single()
+  
+  if (settingsError && settingsError.code !== 'PGRST116') {
+    console.error('Error fetching company settings:', settingsError)
   }
 
   return (
@@ -40,8 +53,8 @@ export default async function SettingsPage() {
       </div>
       <div className="divide-y divide-border rounded-md border">
         <SettingsForm 
-          companyId={companyId!} 
-          initialSettings={initialSettings} 
+          companyId={companyMember.company_id} 
+          initialSettings={settings || {}} 
         />
       </div>
     </div>

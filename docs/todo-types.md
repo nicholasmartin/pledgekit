@@ -8,6 +8,185 @@ We're experiencing type mismatches between our database schema and frontend Type
 - Inconsistent type definitions across the application
 - Technical debt as manual types drift from actual database schema
 
+### Concrete Example: Project Status Type Mismatch
+
+A clear example of this issue exists in our project status handling:
+
+```typescript
+// Database type (generated)
+type ProjectRow = {
+  status: string | null;  // Too permissive
+  // ... other fields
+}
+
+// Component type (manual)
+type Project = {
+  status: "draft" | "published" | "completed" | "cancelled";  // Strictly typed
+  // ... other fields
+}
+```
+
+This mismatch causes several issues:
+1. TypeScript errors when passing database results to components
+2. No runtime validation of status values
+3. Potential for invalid status values in the database
+4. Inconsistent type enforcement across the application
+
+The solution will involve:
+1. Using enums in the database schema
+2. Generating proper TypeScript types
+3. Implementing runtime validation with Zod
+4. Creating proper type transformers between database and domain types
+
+### Concrete Example: Canny API Type Safety
+
+Another critical example exists in our Canny API integration:
+
+```typescript
+// Database types (generated)
+type CannyPost = {
+  company_id: string;  // Direct database column
+  // ... other fields
+}
+
+// API Context type (manual)
+type CompanyContext = {
+  companyId: CompanyMember['company_id'];  // Reference to another type
+  // ... other fields
+}
+
+// Component type (manual)
+type CannyPostView = {
+  companyId: string;  // Normalized name
+  // ... other fields
+}
+```
+
+This mismatch creates several issues:
+1. Type errors when passing `companyId` between layers
+2. Inconsistent field naming (`company_id` vs `companyId`)
+3. No validation of relationships between companies, members, and posts
+4. Scattered type definitions across multiple files
+5. Direct usage of database types in API routes
+
+The solution will involve:
+
+1. Centralize Canny-related types:
+```typescript
+// types/domain/canny.ts
+interface CannyPost {
+  id: string;
+  companyId: string;  // Normalized naming
+  boardId: string;
+  title: string;
+  status: CannyPostStatus;
+  // ... other fields
+}
+
+// types/api/canny.ts
+interface CannyApiContext {
+  companyId: string;
+  apiKey: string;
+}
+
+// types/transformers/canny.ts
+function transformCannyPost(dbPost: DbCannyPost): CannyPost {
+  // Type-safe transformation
+}
+```
+
+2. Add proper validation:
+```typescript
+const cannyPostSchema = z.object({
+  companyId: z.string().uuid(),
+  boardId: z.string(),
+  // ... other validations
+});
+```
+
+3. Create type-safe utility functions:
+```typescript
+async function getCannyContext(): Promise<CannyApiContext> {
+  // Validated context retrieval
+}
+
+async function validateCannyAccess(companyId: string): Promise<void> {
+  // Access validation
+}
+```
+
+4. Update API routes to use domain types:
+```typescript
+export async function handler() {
+  const context = await getCannyContext();
+  const posts = await getCannyPosts(context.companyId);
+  return transformCannyPosts(posts);
+}
+```
+
+This refactor will:
+- Ensure consistent type usage across the Canny integration
+- Properly validate relationships and access
+- Centralize type definitions
+- Make the codebase more maintainable
+
+### Quick Fix Examples
+
+#### Benefits Array Type Mismatch
+
+Current implementation has type safety issues with pledge options' benefits:
+
+```typescript
+// Database type (generated)
+type DbPledgeOption = {
+  benefits: string | number | true | { [key: string]: Json | undefined } | Json[] | null;  // Too permissive JSON type
+  // ... other fields
+}
+
+// Domain type (manual)
+interface PledgeOption {
+  benefits: string[];  // Strictly typed as string array
+  // ... other fields
+}
+```
+
+Quick fix implemented:
+```typescript
+export function transformPledgeOption(dbOption: DbPledgeOption): PledgeOption {
+  return {
+    // ... other fields
+    benefits: Array.isArray(dbOption.benefits) 
+      ? dbOption.benefits.filter((b): b is string => typeof b === 'string') 
+      : []
+  }
+}
+```
+
+While this solution works as a temporary fix by:
+1. Handling type conversion safely
+2. Providing fallback values
+3. Preventing runtime errors
+
+**Proper Fix Needed**: 
+- Update database schema to use a proper array type with string constraints
+- Add database-level validation for benefits content
+- Use proper JSON schema validation in the API layer
+- Generate strict TypeScript types from the schema
+- Implement Zod validation for runtime type safety:
+```typescript
+// Future implementation with Zod
+const pledgeOptionSchema = z.object({
+  benefits: z.array(z.string()).min(1),
+  // ... other fields
+});
+```
+
+This will ensure type safety at all levels:
+1. Database constraints
+2. API validation
+3. Generated TypeScript types
+4. Runtime validation
+
 ## Current Type Organization Issues
 
 We currently have types scattered across multiple locations:
@@ -120,6 +299,124 @@ frontend/src/
 - [ ] Add type generation to CI/CD
 - [ ] Document new type organization
 - [ ] Remove old type files
+
+## Quick Fixes to Revisit
+
+During the SSR migration, we implemented several temporary type fixes that need to be properly addressed:
+
+### 1. Project Status Type Assertions
+
+**Location**: `src/components/dashboard/projects/project-form-tabs.tsx`
+**Issue**: Database type `status: string | null` doesn't match component type `status: "draft" | "published" | "completed" | "cancelled"`
+**Quick Fix**: Type assertion to force database type into component type
+**Proper Fix Needed**: 
+- Add enum in database for project status
+- Generate proper TypeScript types
+- Implement runtime validation
+- Create type transformers
+
+### 2. Company Settings/Branding Type Mismatch
+
+A type mismatch exists in our company branding handling:
+
+```typescript
+// Database type (generated)
+type CompanyRow = {
+  settings: Json | null;  // Contains branding info
+}
+
+// Component type (manual)
+interface CompanyHeaderProps {
+  company: {
+    branding: any;  // Expects branding directly
+  }
+}
+```
+
+Location: `src/app/companies/[slug]/page.tsx` and `src/components/companies/company-header.tsx`
+
+Current quick fix:
+```typescript
+// Using type assertion and nullish coalescing for safety
+branding: (company.settings as { branding?: any } | null)?.branding ?? {}
+```
+
+This is a temporary solution that:
+1. Uses type assertion to tell TypeScript that settings might have a branding property
+2. Handles null/undefined cases with the nullish coalescing operator
+3. Still uses `any` type which isn't ideal for type safety
+
+Proper fix needed:
+1. Define proper interfaces for company settings and branding:
+```typescript
+interface CompanyBranding {
+  primary_color?: string;
+  text_color?: string;
+  // Add other branding properties
+}
+
+interface CompanySettings {
+  branding?: CompanyBranding;
+  // Add other settings properties
+}
+```
+2. Update database schema to match these types
+3. Generate proper TypeScript types from the schema
+4. Implement runtime validation
+
+### 3. Project with Company Slug Type
+
+A type extension is needed for projects when displaying them with company information:
+
+```typescript
+// Database type (generated)
+type ProjectRow = Database["public"]["Tables"]["projects"]["Row"]
+
+// Component type (manual)
+type ProjectWithCompany = ProjectRow & {
+  company_slug: string;  // Added field from join
+}
+```
+
+Location: `src/app/companies/[slug]/page.tsx` and `src/components/dashboard/projects/projects-client.tsx`
+
+Current quick fix:
+- Manually extending the Project type with company_slug
+- Type assertion after database join query
+
+**Proper Fix Needed**:
+1. Define proper join types in database schema
+2. Generate TypeScript types for common joins
+3. Create type utilities for handling joined data
+4. Consider using Prisma or similar ORM for better type safety with joins
+
+### Similar Patterns to Look For:
+1. Type assertions using `as const` or specific type assertions
+2. Manual type definitions that should come from database
+3. Nullable fields in database being treated as non-null in components
+4. String fields in database being treated as enums in components
+
+## Quick Fixes Reference
+
+### Handling Nullable Date Fields
+
+**Problem**: Type error when passing potentially null values to Date constructor:
+```typescript
+// Error: Argument of type 'string | null' is not assignable to parameter of type 'string | number | Date'
+{new Date(pledge.created_at).toLocaleDateString()}
+```
+
+**Quick Fix**: Add null check with ternary operator:
+```typescript
+{pledge.created_at ? new Date(pledge.created_at).toLocaleDateString() : 'Date not available'}
+```
+
+**Why it works**: 
+- Ensures Date constructor only receives string when value exists
+- Provides fallback for null case
+- Satisfies TypeScript's type checking
+
+**Long-term consideration**: Consider making created_at non-nullable in database schema if dates should always be present
 
 ## Solution Implementation
 

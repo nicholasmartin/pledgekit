@@ -1,65 +1,63 @@
-import { createServer } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
+import { cookies } from "next/headers"
+import { createServerSupabase } from "@/lib/server-supabase"
 import { ProjectDetail } from "@/components/companies/project-detail"
+import { transformProject, transformCompany } from "@/lib/transformers/project"
+import type { Project, ProjectWithCompany } from "@/types/domain/project"
 
-interface Props {
+interface PageParams {
   params: {
     slug: string
     id: string
   }
 }
 
-export default async function ProjectDetailPage({ params }: Props) {
-  const supabase = createServer()
+export default async function ProjectDetailPage({ params }: PageParams) {
+  // Must call cookies() before any Supabase calls as per SSR requirements
+  cookies()
+  const supabase = createServerSupabase()
+  
+  // Fetch project with pledge options
+  const { data: project, error } = await supabase
+    .from("projects")
+    .select("*, pledge_options(*)")
+    .eq("id", params.id)
+    .single()
 
-  // Get company by slug
+  if (error || !project) {
+    console.error('Error fetching project:', error)
+    return notFound()
+  }
+
+  // Fetch company
   const { data: company, error: companyError } = await supabase
     .from("companies")
-    .select("id, name, slug, branding")
-    .eq("slug", params.slug)
+    .select("*")
+    .eq("id", project.company_id)
     .single()
 
   if (companyError || !company) {
-    notFound()
+    console.error('Error fetching company:', companyError)
+    return notFound()
   }
 
-  // Get project with pledge options and benefits
-  const { data: project, error: projectError } = await supabase
-    .from("projects")
-    .select(`
-      *,
-      pledge_options (
-        id,
-        title,
-        amount,
-        benefits,
-        created_at
-      ),
-      updates (
-        id,
-        title,
-        content,
-        created_at
-      )
-    `)
-    .eq("id", params.id)
-    .eq("company_id", company.id)
-    .single()
-
-  if (projectError || !project) {
-    notFound()
-  }
-
-  // Get total number of pledges
-  const { count: pledgeCount } = await supabase
+  // Count pledges
+  const { count: pledgeCount, error: pledgeError } = await supabase
     .from("pledges")
     .select("*", { count: "exact", head: true })
     .eq("project_id", project.id)
 
+  if (pledgeError) {
+    console.error('Error counting pledges:', pledgeError)
+  }
+
+  const transformedProject = transformProject(project)
+  const transformedCompany = transformCompany(company)
+
   return (
     <ProjectDetail 
-      project={project} 
-      company={company} 
+      project={transformedProject}
+      company={transformedCompany}
       pledgeCount={pledgeCount || 0}
     />
   )

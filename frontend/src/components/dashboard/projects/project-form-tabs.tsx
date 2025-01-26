@@ -1,22 +1,27 @@
 "use client"
 
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Button } from "@/components/ui/button"
 import { ProjectDetailsForm } from "./project-details-form"
 import { PledgeOptionsForm } from "./pledge-options-form"
 import { PledgeBenefitsForm } from "./pledge-benefits-form"
 import { ProjectCannyPosts } from "./project-canny-posts"
-import { Button } from "@/components/ui/button"
-import { useState, useEffect } from "react"
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
-import { useRouter } from "next/navigation"
+import type { Database } from "@/lib/database.types"
 
-interface Project {
-  id: string
-  title: string
-  description: string | null
-  goal: number
-  end_date: string
-  status: "draft" | "published" | "completed" | "cancelled"
+type Project = Database["public"]["Tables"]["projects"]["Row"]
+type ProjectStatus = "draft" | "published" | "completed" | "cancelled"
+
+// TODO: This type assertion is temporary and should be fixed as part of the type refactoring
+// See docs/todo-types.md "Quick Fixes to Revisit" section
+const transformProject = (project: Project | undefined) => {
+  if (!project) return undefined;
+  return {
+    ...project,
+    status: (project.status || "draft") as ProjectStatus
+  }
 }
 
 interface ProjectFormTabsProps {
@@ -26,9 +31,10 @@ interface ProjectFormTabsProps {
 
 export function ProjectFormTabs({ companyId, project: initialProject }: ProjectFormTabsProps) {
   const router = useRouter()
-  const supabase = createClientComponentClient()
+  const supabase = createClient()
   const [activeTab, setActiveTab] = useState("details")
   const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState<Error | null>(null)
   const [projectId, setProjectId] = useState<string | undefined>(initialProject?.id)
   const [project, setProject] = useState<Project | undefined>(initialProject)
 
@@ -41,36 +47,81 @@ export function ProjectFormTabs({ companyId, project: initialProject }: ProjectF
   const loadProject = async () => {
     if (!projectId) return
 
-    const { data, error } = await supabase
-      .from("projects")
-      .select("*")
-      .eq("id", projectId)
-      .single()
+    try {
+      const { data, error } = await supabase
+        .from("projects")
+        .select("*")
+        .eq("id", projectId)
+        .single()
 
-    if (error) {
-      console.error("Error loading project:", error)
-      return
-    }
+      if (error) {
+        throw error
+      }
 
-    if (data) {
-      setProject(data)
+      if (data) {
+        setProject(data)
+        setError(null)
+      }
+    } catch (err) {
+      console.error("Error loading project:", err)
+      setError(err instanceof Error ? err : new Error('Failed to load project'))
     }
   }
 
   const handleSaveDraft = async () => {
+    if (!projectId) return
+
     setIsSaving(true)
-    // TODO: Implement save draft functionality
-    setIsSaving(false)
+    setError(null)
+
+    try {
+      const { error } = await supabase
+        .from("projects")
+        .update({ status: "draft", updated_at: new Date().toISOString() })
+        .eq("id", projectId)
+
+      if (error) throw error
+
+      router.refresh()
+    } catch (err) {
+      console.error("Error saving draft:", err)
+      setError(err instanceof Error ? err : new Error('Failed to save draft'))
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handlePublish = async () => {
+    if (!projectId) return
+
     setIsSaving(true)
-    // TODO: Implement publish functionality
-    setIsSaving(false)
+    setError(null)
+
+    try {
+      const { error } = await supabase
+        .from("projects")
+        .update({ 
+          status: "published", 
+          updated_at: new Date().toISOString(),
+          visibility: "public"
+        })
+        .eq("id", projectId)
+
+      if (error) throw error
+
+      router.refresh()
+      router.push(`/projects/${projectId}`)
+    } catch (err) {
+      console.error("Error publishing project:", err)
+      setError(err instanceof Error ? err : new Error('Failed to publish project'))
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleProjectSave = (id: string) => {
     setProjectId(id)
+    setError(null)
     loadProject() // Load the project data immediately after save
     setActiveTab("options")
   }
@@ -89,6 +140,11 @@ export function ProjectFormTabs({ companyId, project: initialProject }: ProjectF
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div className="bg-destructive/15 text-destructive px-4 py-2 rounded-md">
+          {error.message}
+        </div>
+      )}
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="details">Project Details</TabsTrigger>
@@ -105,7 +161,7 @@ export function ProjectFormTabs({ companyId, project: initialProject }: ProjectF
         <TabsContent value="details" className="space-y-4">
           <ProjectDetailsForm
             companyId={companyId}
-            project={project}
+            project={transformProject(project)}
             onSave={handleProjectSave}
           />
         </TabsContent>

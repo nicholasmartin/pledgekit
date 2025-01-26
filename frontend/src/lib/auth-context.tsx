@@ -1,12 +1,14 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
-import type { User } from '@supabase/supabase-js'
+import { User } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/client'
 
 interface AuthContextType {
   user: User | null
+  isLoading: boolean
+  error: Error | null
   signOut: () => Promise<void>
 }
 
@@ -19,41 +21,65 @@ export function AuthProvider({
 }) {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
+  const supabase = createClient()
 
   useEffect(() => {
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session?.user) {
-        setUser(session.user)
-      } else {
-        setUser(null)
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      try {
+        if (session?.user) {
+          setUser(session.user)
+        } else {
+          setUser(null)
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('An error occurred during auth state change'))
+      } finally {
+        setIsLoading(false)
       }
     })
 
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser(session.user)
+    const initializeAuth = async () => {
+      try {
+        setIsLoading(true)
+        const { data: { user }, error } = await supabase.auth.getUser()
+        if (error) throw error
+        if (user) {
+          setUser(user)
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Failed to initialize auth'))
+      } finally {
+        setIsLoading(false)
       }
-    })
+    }
+
+    initializeAuth()
 
     return () => {
       subscription.unsubscribe()
     }
-  }, [supabase])
+  }, [])
 
   const signOut = async () => {
-    await supabase.auth.signOut()
-    router.push('/login')
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+      router.push('/login')
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to sign out'))
+      throw err // Re-throw to allow handling by the caller
+    }
   }
 
   const value = {
     user,
+    isLoading,
+    error,
     signOut,
   }
 

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { createBrowserClient } from "@supabase/ssr"
+import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import {
@@ -26,10 +26,7 @@ interface MainNavClientProps {
 export function MainNavClient({ initialUserDetails }: MainNavClientProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabase = createClient()
   const [userDetails, setUserDetails] = useState<UserDetails | null>(initialUserDetails)
 
   useEffect(() => {
@@ -39,11 +36,19 @@ export function MainNavClient({ initialUserDetails }: MainNavClientProps) {
           setUserDetails(null)
           router.refresh()
         } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          // Fetch latest user details
-          const response = await fetch('/api/user')
-          const details = await response.json()
-          setUserDetails(details)
-          router.refresh()
+          try {
+            // Fetch latest user details
+            const response = await fetch('/api/user')
+            if (!response.ok) {
+              throw new Error('Failed to fetch user details')
+            }
+            const details = await response.json()
+            setUserDetails(details)
+            router.refresh()
+          } catch (error) {
+            console.error('Error fetching user details:', error)
+            // Keep existing user details on error
+          }
         }
       }
     )

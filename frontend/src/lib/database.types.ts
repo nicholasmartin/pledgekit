@@ -34,6 +34,148 @@ export type Database = {
   }
   public: {
     Tables: {
+      canny_boards: {
+        Row: {
+          canny_board_id: string
+          company_id: string
+          created_at: string
+          id: string
+          last_synced_at: string
+          name: string
+          post_count: number
+        }
+        Insert: {
+          canny_board_id: string
+          company_id: string
+          created_at?: string
+          id?: string
+          last_synced_at?: string
+          name: string
+          post_count?: number
+        }
+        Update: {
+          canny_board_id?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          last_synced_at?: string
+          name?: string
+          post_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "canny_boards_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      canny_posts: {
+        Row: {
+          author_name: string | null
+          board_id: string | null
+          board_name: string | null
+          canny_post_id: string
+          comment_count: number
+          company_id: string
+          created_at: string
+          details: string | null
+          id: string
+          last_synced_at: string
+          project_id: string | null
+          score: number
+          status: string
+          title: string
+          url: string | null
+        }
+        Insert: {
+          author_name?: string | null
+          board_id?: string | null
+          board_name?: string | null
+          canny_post_id: string
+          comment_count?: number
+          company_id: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          last_synced_at?: string
+          project_id?: string | null
+          score?: number
+          status: string
+          title: string
+          url?: string | null
+        }
+        Update: {
+          author_name?: string | null
+          board_id?: string | null
+          board_name?: string | null
+          canny_post_id?: string
+          comment_count?: number
+          company_id?: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          last_synced_at?: string
+          project_id?: string | null
+          score?: number
+          status?: string
+          title?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "canny_posts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "canny_posts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      canny_sync_logs: {
+        Row: {
+          company_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          records_synced: number
+          status: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          records_synced?: number
+          status: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          records_synced?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "canny_sync_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           created_at: string | null
@@ -70,38 +212,6 @@ export type Database = {
         }
         Relationships: []
       }
-      company_settings: {
-        Row: {
-          id: string
-          company_id: string
-          canny_api_key: string | null
-          created_at: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          id?: string
-          company_id: string
-          canny_api_key?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          id?: string
-          company_id?: string
-          canny_api_key?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "company_settings_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: true
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
       company_members: {
         Row: {
           company_id: string | null
@@ -134,31 +244,34 @@ export type Database = {
           },
         ]
       }
-      canny_posts: {
+      company_settings: {
         Row: {
+          canny_api_key: string
+          company_id: string
+          created_at: string
           id: string
-          canny_post_id: string
-          project_id: string | null
-          created_at: string | null
+          updated_at: string
         }
         Insert: {
+          canny_api_key?: string
+          company_id: string
+          created_at?: string
           id?: string
-          canny_post_id: string
-          project_id?: string | null
-          created_at?: string | null
+          updated_at?: string
         }
         Update: {
+          canny_api_key?: string
+          company_id?: string
+          created_at?: string
           id?: string
-          canny_post_id?: string
-          project_id?: string | null
-          created_at?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "canny_posts_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
+            foreignKeyName: "company_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -201,6 +314,60 @@ export type Database = {
           },
         ]
       }
+      pledges: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          payment_intent_id: string | null
+          payment_method_id: string | null
+          pledge_option_id: string
+          project_id: string
+          status: Database["public"]["Enums"]["pledge_status"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          payment_intent_id?: string | null
+          payment_method_id?: string | null
+          pledge_option_id: string
+          project_id: string
+          status?: Database["public"]["Enums"]["pledge_status"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          payment_intent_id?: string | null
+          payment_method_id?: string | null
+          pledge_option_id?: string
+          project_id?: string
+          status?: Database["public"]["Enums"]["pledge_status"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pledges_pledge_option_id_fkey"
+            columns: ["pledge_option_id"]
+            isOneToOne: false
+            referencedRelation: "pledge_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pledges_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           amount_pledged: number | null
@@ -211,7 +378,7 @@ export type Database = {
           goal: number
           header_image_url: string | null
           id: string
-          status: string | null
+          status: Database["public"]["Enums"]["project_status"]
           title: string
           updated_at: string | null
           visibility: string | null
@@ -225,7 +392,7 @@ export type Database = {
           goal: number
           header_image_url?: string | null
           id?: string
-          status?: string | null
+          status?: Database["public"]["Enums"]["project_status"]
           title: string
           updated_at?: string | null
           visibility?: string | null
@@ -239,7 +406,7 @@ export type Database = {
           goal?: number
           header_image_url?: string | null
           id?: string
-          status?: string | null
+          status?: Database["public"]["Enums"]["project_status"]
           title?: string
           updated_at?: string | null
           visibility?: string | null
@@ -377,6 +544,8 @@ export type Database = {
       }
     }
     Enums: {
+      pledge_status: "pending" | "completed" | "cancelled" | "failed"
+      project_status: "published" | "draft" | "completed" | "cancelled"
       user_type: "company_member" | "public_user"
     }
     CompositeTypes: {

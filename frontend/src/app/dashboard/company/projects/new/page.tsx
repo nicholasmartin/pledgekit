@@ -1,30 +1,65 @@
-import { createServer } from "@/lib/supabase/server"
+import { createServerSupabase } from "@/lib/server-supabase"
 import { ProjectFormTabs } from "@/components/dashboard/projects/project-form-tabs"
-import { getSession } from "@/lib/server-auth"
+import { getUser } from "@/lib/server-auth"
 import { redirect } from "next/navigation"
+import { cookies } from "next/headers"
 
 export default async function NewProjectPage() {
-  const session = await getSession()
-  if (!session?.user) {
+  // Call cookies() before any Supabase calls
+  cookies()
+  
+  const user = await getUser()
+  if (!user) {
     redirect('/login')
   }
   
-  const supabase = createServer()
+  const supabase = createServerSupabase()
 
   // Get the company_id for the current user
   const { data: companyMember, error: memberError } = await supabase
     .from("company_members")
-    .select("company_id")
-    .eq("user_id", session.user.id)
+    .select(`
+      company_id,
+      company:companies (
+        name
+      )
+    `)
+    .eq("user_id", user.id)
     .single()
 
-  if (memberError || !companyMember?.company_id) {
-    return <div>You must be part of a company to create projects.</div>
+  if (memberError) {
+    if (memberError.code !== 'PGRST116') {
+      console.error('Error fetching company member:', memberError)
+    }
+    return (
+      <div className="max-w-4xl mx-auto py-6">
+        <div className="p-4 text-red-600 bg-red-50 rounded-md">
+          You must be part of a company to create projects.
+        </div>
+      </div>
+    )
+  }
+
+  if (!companyMember?.company_id) {
+    return (
+      <div className="max-w-4xl mx-auto py-6">
+        <div className="p-4 text-red-600 bg-red-50 rounded-md">
+          No company found. Please contact support if this is unexpected.
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="max-w-4xl mx-auto py-6">
-      <h1 className="text-3xl font-bold mb-6">New Project</h1>
+      <div className="flex flex-col space-y-2 mb-6">
+        <h1 className="text-3xl font-bold">New Project</h1>
+        {companyMember.company?.name && (
+          <p className="text-muted-foreground">
+            Creating a new project for {companyMember.company.name}
+          </p>
+        )}
+      </div>
       <ProjectFormTabs companyId={companyMember.company_id} />
     </div>
   )

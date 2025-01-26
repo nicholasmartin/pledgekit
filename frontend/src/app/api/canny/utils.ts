@@ -2,6 +2,8 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import { RateLimiter } from "limiter"
+import { Database } from "@/lib/database.types"
+import { PostgrestError } from '@supabase/supabase-js'
 
 // Rate limiter: 100 requests per minute
 const limiter = new RateLimiter({
@@ -10,8 +12,9 @@ const limiter = new RateLimiter({
 })
 
 export interface CannyError {
-  message: string
-  status: number
+  message: string;
+  status: number;
+  code?: string;  // For database error codes
 }
 
 // Validate pagination parameters
@@ -25,11 +28,21 @@ export function validatePagination(limit?: number | null, skip?: number): CannyE
   return null
 }
 
+// Define strict types for company-related data
+type CompanyMember = Database['public']['Tables']['company_members']['Row']
+type CompanySettings = Database['public']['Tables']['company_settings']['Row']
+
+type CompanyContext = {
+  supabase: ReturnType<typeof createServerClient<Database>>;
+  companyId: CompanyMember['company_id'];
+  cannyApiKey: NonNullable<CompanySettings['canny_api_key']>;
+}
+
 // Get authenticated company context
-export async function getCompanyContext() {
+export async function getCompanyContext(): Promise<CompanyContext> {
   const cookieStore = cookies()
 
-  const supabase = createServerClient(
+  const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -102,14 +115,28 @@ export async function checkRateLimit(): Promise<CannyError | null> {
 }
 
 // Error response helper
-export function errorResponse(error: CannyError | Error, status = 500) {
+export function errorResponse(
+  error: CannyError | Error | PostgrestError, 
+  status = 500
+): NextResponse {
+  // Handle PostgrestError specifically
+  if ('code' in error) {
+    return NextResponse.json({ 
+      error: error.message,
+      code: error.code 
+    }, { 
+      status: 'status' in error ? error.status : status 
+    })
+  }
+
+  // Handle standard errors
   const message = 'message' in error ? error.message : 'Internal server error'
   const statusCode = 'status' in error ? error.status : status
   return NextResponse.json({ error: message }, { status: statusCode })
 }
 
 // Cache control helper
-export function setCacheHeaders(response: NextResponse) {
+export function setCacheHeaders(response: NextResponse): NextResponse {
   // Cache for 5 minutes, allow stale data for up to 1 hour while revalidating
   response.headers.set(
     'Cache-Control',
