@@ -4,22 +4,11 @@ import { Card } from '@/components/ui/card'
 import { ProjectsClient } from '@/components/dashboard/projects/projects-client'
 import { DashboardHeader } from '@/components/dashboard/dashboard-header'
 import { PublicPageCard } from '@/components/dashboard/company/public-page-card'
-
-interface Project {
-  id: string
-  title: string
-  status: string
-  pledge_options: Array<{
-    id: string
-    title: string
-    amount: number
-    benefits: string[]
-  }>
-}
+import { ProjectWithPledges } from '@/types/domain/project/types'
 
 interface CompanyDashboardProps {
   companySlug: string
-  projects: Project[]
+  projects: ProjectWithPledges[]
 }
 
 export function CompanyDashboard({ companySlug, projects }: CompanyDashboardProps) {

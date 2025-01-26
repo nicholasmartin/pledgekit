@@ -11,7 +11,7 @@ export function AuthListener() {
   useEffect(() => {
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT') {
         // Immediately redirect on sign out
         router.push('/login')
@@ -21,7 +21,7 @@ export function AuthListener() {
     return () => {
       subscription.unsubscribe()
     }
-  }, [supabase])
+  }, [router, supabase.auth])
 
   return null
 }

@@ -1,6 +1,5 @@
-import { createServerSupabase } from "@/lib/server-supabase"
+import { createServer, getUser } from "@/lib/supabase/server"
 import { SettingsForm } from "@/components/dashboard/company/settings-form"
-import { getUser } from "@/lib/server-auth"
 import { redirect } from "next/navigation"
 import { cookies } from "next/headers"
 
@@ -13,7 +12,7 @@ export default async function SettingsPage() {
     redirect('/login')
   }
 
-  const supabase = createServerSupabase()
+  const supabase = createServer()
   
   // Get the company membership and settings
   const { data: companyMember, error: memberError } = await supabase

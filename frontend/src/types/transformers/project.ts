@@ -52,7 +52,7 @@ export function toProjectWithPledges(
       id: option.id,
       title: option.title,
       amount: option.amount,
-      benefits: option.benefits ? JSON.parse(JSON.stringify(option.benefits)) : []
+      benefits: option.benefits || []
     })) || []
   }
 }

@@ -1,8 +1,10 @@
-import { getUser } from '@/lib/server-auth'
-import { createServerSupabase } from '@/lib/server-supabase'
+import { getUser } from '@/lib/supabase/server'
+import { createServer } from '@/lib/supabase/server'
 import { CompanyDashboard } from './components/company-dashboard'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
+import { toProjectWithPledges } from '@/types/transformers/project'
+import type { Tables } from '@/types/helpers/database'
 
 export default async function Page() {
   // Call cookies() before any Supabase calls
@@ -13,26 +15,24 @@ export default async function Page() {
     redirect('/login')
   }
   
-  const supabase = createServerSupabase()
+  const supabase = createServer()
 
   // Get the company_id for the current user
   const { data: companyMember, error: memberError } = await supabase
     .from("company_members")
     .select("company_id")
-    .eq("user_id", user.id)
+    .eq('user_id', user.id)
     .single()
 
-  if (memberError || !companyMember?.company_id) {
-    if (memberError?.code !== 'PGRST116') {
-      console.error('Error fetching company member:', memberError)
-    }
-    return <div>You must be part of a company to view this dashboard.</div>
+  if (memberError || !companyMember || !companyMember.company_id) {
+    console.error('Error fetching company member:', memberError)
+    return <div>Error fetching company member.</div>
   }
 
-  // Get company details including slug
+  // Get the company details
   const { data: company, error: companyError } = await supabase
-    .from('companies')
-    .select('id, name, slug')
+    .from("companies")
+    .select("*")
     .eq('id', companyMember.company_id)
     .single()
 
@@ -41,31 +41,28 @@ export default async function Page() {
     return <div>Company not found.</div>
   }
 
-  // Get all published projects for the company
-  const { data: projects, error: projectsError } = await supabase
+  // Get all published projects for the company with their pledge options
+  const { data: dbProjects, error: projectsError } = await supabase
     .from('projects')
-    .select(`
-      id,
-      title,
-      description,
-      goal,
-      amount_pledged,
-      end_date,
-      header_image_url,
-      status
-    `)
+    .select('*, pledge_options(*)')
     .eq('company_id', company.id)
     .eq('status', 'published')
     .order('created_at', { ascending: false })
 
   if (projectsError) {
     console.error('Error fetching projects:', projectsError)
+    return <div>Error fetching projects.</div>
   }
+
+  // Transform database projects to domain projects with pledge options
+  const projects = (dbProjects as (Tables<'projects'> & { 
+    pledge_options: Tables<'pledge_options'>[] 
+  })[]).map(toProjectWithPledges)
 
   return (
     <CompanyDashboard
-      company={company}
-      projects={projects || []}
+      companySlug={company.slug}
+      projects={projects}
     />
   )
 }

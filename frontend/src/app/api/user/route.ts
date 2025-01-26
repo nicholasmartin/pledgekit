@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-import { getUserDetails } from '@/lib/server-auth'
+import { getUserDetails } from '@/lib/supabase/server'
 import { createServer } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'

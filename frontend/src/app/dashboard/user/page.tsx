@@ -1,10 +1,10 @@
-import { getUser } from '@/lib/server-auth'
-import { createServerSupabase } from '@/lib/server-supabase'
+import { createServer } from '@/lib/supabase/server'
+import { getUser } from '@/lib/supabase/server'
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { DashboardHeader } from '@/components/dashboard/dashboard-header'
 import { formatCurrency } from '@/lib/utils'
-import { cookies } from 'next/headers'
 
 export default async function UserDashboard() {
   // Call cookies() before any Supabase calls
@@ -15,7 +15,7 @@ export default async function UserDashboard() {
     redirect('/login')
   }
 
-  const supabase = createServerSupabase()
+  const supabase = createServer()
 
   // Get user's pledges
   const { data: pledges, error: pledgesError } = await supabase

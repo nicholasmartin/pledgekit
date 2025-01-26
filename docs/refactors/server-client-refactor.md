@@ -105,14 +105,14 @@ export async function getUserByEmail(email: string) {
 
 ### 2. Update File References
 Files to update:
-- [ ] `frontend/src/lib/server-auth.ts`
-- [ ] `frontend/src/app/dashboard/user/page.tsx`
-- [ ] `frontend/src/app/dashboard/company/page.tsx`
-- [ ] `frontend/src/app/dashboard/company/settings/page.tsx`
-- [ ] `frontend/src/app/dashboard/company/projects/page.tsx`
-- [ ] `frontend/src/app/dashboard/company/projects/new/page.tsx`
-- [ ] `frontend/src/app/dashboard/company/projects/[id]/edit/page.tsx`
-- [ ] `frontend/src/app/companies/[slug]/projects/[id]/page.tsx`
+- [x] `frontend/src/lib/server-auth.ts` (migrated to new server structure)
+- [x] `frontend/src/app/dashboard/user/page.tsx` (updated to use new server imports)
+- [x] `frontend/src/app/dashboard/company/page.tsx` (updated to use new server imports)
+- [x] `frontend/src/app/dashboard/company/settings/page.tsx` (updated to use new server imports)
+- [x] `frontend/src/app/dashboard/company/projects/page.tsx` (no Supabase imports found)
+- [x] `frontend/src/app/dashboard/company/projects/new/page.tsx` (no Supabase imports found)
+- [x] `frontend/src/app/dashboard/company/projects/[id]/edit/page.tsx` (no Supabase imports found)
+- [x] `frontend/src/app/companies/[slug]/projects/[id]/page.tsx` (no Supabase imports found)
 
 ### 3. Testing Plan
 1. Server Client Tests
