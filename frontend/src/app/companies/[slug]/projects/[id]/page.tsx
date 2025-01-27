@@ -1,26 +1,48 @@
 "use client"
 
 import { notFound } from "next/navigation"
-import { ProjectDetail } from "@/components/public/projects/project-detail"
-import { getProjectData } from "./page.server"
+import { getCompany, getCompanyProjects } from "@/lib/supabase/server"
+import { ProjectDetails } from "./components/ProjectDetails"
+import { toPublicCompany } from "@/types/transformers/company"
+import { toPublicProject } from "@/types/transformers/project"
 
-interface PageParams {
+interface PageProps {
   params: {
     slug: string
     id: string
   }
 }
 
-export default async function ProjectDetailPage({ params }: PageParams) {
-  const project = await getProjectData({ params })
+export default async function ProjectPage({ params }: PageProps) {
+  try {
+    // Fetch company data
+    const company = await getCompany(params.slug)
+    
+    // Fetch projects for this company
+    const projects = await getCompanyProjects(company.id)
+    const project = projects.find(p => p.id === params.id)
+    
+    if (!project) {
+      notFound()
+    }
 
-  if (!project) {
-    return notFound()
+    const publicCompany = toPublicCompany(company)
+    const publicProject = toPublicProject({ ...project, companies: company })
+    
+    if (!publicProject) {
+      notFound()
+    }
+
+    return (
+      <div className="min-h-screen bg-background">
+        <ProjectDetails 
+          project={publicProject} 
+          company={publicCompany}
+        />
+      </div>
+    )
+  } catch (error) {
+    console.error("Error loading project:", error)
+    notFound()
   }
-
-  return (
-    <div className="container py-8">
-      <ProjectDetail project={project} />
-    </div>
-  )
 }

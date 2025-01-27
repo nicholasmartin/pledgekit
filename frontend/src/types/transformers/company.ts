@@ -1,22 +1,20 @@
 import { Tables } from '../helpers/database'
+import { PublicCompany } from '../domain/company/public'
 
 interface CompanySettings {
   logo_url?: string | null
   branding?: Record<string, any>
 }
 
-export function toPublicCompany(dbCompany: Tables<'companies'>): {
-  name: string
-  description: string | null
-  logo_url: string | null
-  branding: any
-} {
+export function toPublicCompany(dbCompany: Tables<'companies'>): PublicCompany {
   const settings = dbCompany.settings as CompanySettings | null
 
   return {
+    id: dbCompany.id,
     name: dbCompany.name,
+    slug: dbCompany.slug,
     description: dbCompany.description,
-    logo_url: settings?.logo_url ?? null,
-    branding: settings?.branding ?? {}
+    logoUrl: settings?.logo_url ?? undefined,
+    website: dbCompany.website_url ?? undefined,
   }
 }

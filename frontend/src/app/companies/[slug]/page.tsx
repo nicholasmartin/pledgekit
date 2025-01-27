@@ -28,7 +28,6 @@ export default function CompanyPage({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
   const [hasMore, setHasMore] = useState(true)
-  const [page, setPage] = useState(1)
   const supabase = createClient()
   const { ref, inView } = useInView()
 
@@ -73,7 +72,7 @@ export default function CompanyPage({
 
     try {
       setLoading(true)
-      const from = page * 10
+      const from = projects.length
       const to = from + 9
 
       console.log("Fetching projects for company:", company.id, "range:", from, "to", to)
@@ -110,7 +109,6 @@ export default function CompanyPage({
       }
 
       setProjects(prev => [...prev, ...publicProjects])
-      setPage(prev => prev + 1)
       setError(null)
     } catch (err) {
       console.error("Error fetching projects:", err)
@@ -118,7 +116,7 @@ export default function CompanyPage({
     } finally {
       setLoading(false)
     }
-  }, [company?.id, hasMore, loading, page, supabase])
+  }, [company?.id, hasMore, loading, projects.length, supabase])
 
   // Initial fetch of projects when company is loaded
   useEffect(() => {
@@ -161,12 +159,23 @@ export default function CompanyPage({
       ) : (
         company && (
           <>
-            <CompanyHeader company={toPublicCompany(company)} />
-            <ProjectList 
-              companyId={company.id} 
-              companySlug={company.slug}
-              initialProjects={projects} 
+            <CompanyHeader 
+              company={{
+                name: company.name,
+                description: company.description,
+                logo_url: (company.settings as any)?.logo_url ?? null,
+                branding: (company.settings as any)?.branding ?? {}
+              }}
             />
+            <main className="mx-auto max-w-7xl">
+              <ProjectList 
+                companyId={company.id} 
+                companySlug={company.slug}
+                projects={projects}
+                isLoading={loading}
+                loadMoreRef={ref}
+              />
+            </main>
           </>
         )
       )}
