@@ -1,5 +1,6 @@
 import { cache } from 'react'
-import type { UserType, UserDetails } from '@/types/external/supabase'
+import { UserType, isUserType } from '@/types/external/supabase/auth'
+import type { UserDetails } from '@/types/external/supabase'
 import { SupabaseError } from '../utils/errors'
 import { createServer } from './server'
 
@@ -39,7 +40,7 @@ export const getUserType = cache(async (): Promise<UserType | null> => {
 
     // First, check user metadata for explicit user type
     const userType = user.user_metadata?.user_type
-    if (userType && (userType === 'company' || userType === 'user')) {
+    if (userType && isUserType(userType)) {
       return userType
     }
 
@@ -59,7 +60,7 @@ export const getUserType = cache(async (): Promise<UserType | null> => {
       )
     }
     
-    return companyMember ? 'company' : 'user'
+    return companyMember ? UserType.COMPANY : UserType.USER
   } catch (error) {
     console.error('Error getting user type:', error)
     return null

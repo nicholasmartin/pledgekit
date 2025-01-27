@@ -2,17 +2,20 @@
 
 import { useState } from 'react'
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
-import { useAuth } from '@/lib/auth-context'
+import { useSupabase } from '@/lib/supabase/hooks'
+import { useRouter } from 'next/navigation'
 
 export function LogoutButton() {
-  const { signOut } = useAuth()
+  const supabase = useSupabase()
+  const router = useRouter()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const handleLogout = async () => {
     if (isLoggingOut) return
     setIsLoggingOut(true)
     try {
-      await signOut()
+      await supabase.auth.signOut()
+      router.refresh()
     } catch (error) {
       setIsLoggingOut(false)
       console.error('Error logging out:', error)

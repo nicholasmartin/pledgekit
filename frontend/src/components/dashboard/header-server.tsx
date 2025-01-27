@@ -1,4 +1,4 @@
-import { getUserDetails } from '@/lib/server-auth'
+import { getUserDetails } from '@/lib/supabase/server/auth'
 import { HeaderClient } from './header-client'
 import { redirect } from 'next/navigation'
 

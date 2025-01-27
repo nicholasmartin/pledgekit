@@ -19,7 +19,19 @@ export type ProjectWithPledges = Project & {
   }[]
 }
 
-export type ProjectWithCompany = Project & {
+export type ProjectWithCompany = {
+  id: string
+  title: string
+  description: string | null
+  goal: number
+  amount_pledged: number | null
+  end_date: string
+  header_image_url: string | null
+  company_id: string
+  status: "draft" | "published" | "completed" | "cancelled"
+  visibility: "public" | "private"
+  created_at: string | null
+  updated_at: string | null
   company: {
     id: string
     name: string

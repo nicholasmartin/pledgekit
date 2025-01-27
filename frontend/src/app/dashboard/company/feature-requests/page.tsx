@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
-import { supabase } from "@/lib/supabase"
+import { useSupabase } from "@/lib/supabase/hooks"
 import {
   Table,
   TableBody,
@@ -559,7 +559,7 @@ export default function FeatureRequestsPage() {
             console.log('Attempting to update posts:', { projectId, selectedPosts })
 
             // Get the selected project details for optimistic update
-            const { data: projectData } = await supabase
+            const { data: projectData } = await useSupabase()
               .from("projects")
               .select("id, title")
               .eq("id", projectId)
@@ -582,7 +582,7 @@ export default function FeatureRequestsPage() {
             setAllPosts(updatedPosts)
 
             // Make the actual update
-            const { data, error } = await supabase
+            const { data, error } = await useSupabase()
               .from("canny_posts")
               .update({ project_id: projectId })
               .in("canny_post_id", selectedPosts)

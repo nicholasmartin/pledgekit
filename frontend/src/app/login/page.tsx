@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { supabase, getClientUserType } from "@/lib/supabase"
+import { signInWithPassword, getUserType } from "@/lib/supabase/client/auth"
+import { UserType } from "@/types/external/supabase/auth"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -41,30 +42,13 @@ export default function LoginPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: values.email,
-        password: values.password,
-      })
-
-      if (error) {
-        toast({
-          title: "Login Error",
-          description: error.message,
-          variant: "destructive",
-        })
-        return
-      }
-
-      // Ensure user is logged in
-      if (!data.user) {
-        throw new Error('Login failed: No user data')
-      }
+      const data = await signInWithPassword(values.email, values.password)
 
       // Get user type from metadata
-      const userType = await getClientUserType()
+      const userType = await getUserType()
       
       // Redirect based on user type
-      if (userType === 'company_member') {
+      if (userType === UserType.COMPANY) {
         router.push('/dashboard/company')
       } else {
         router.push('/dashboard/user')

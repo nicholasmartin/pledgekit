@@ -20,6 +20,7 @@ import {
 import { toast } from "@/components/ui/use-toast"
 import Link from "next/link"
 import { useSupabase } from "@/lib/supabase/hooks"
+import { UserType } from "@/types/external/supabase/auth"
 
 const formSchema = z.object({
   email: z.string().email({
@@ -62,12 +63,23 @@ export function LoginForm() {
         throw new Error("Failed to establish session")
       }
 
+      // Determine redirect path based on user type
+      let redirectPath = redirectTo
+      const userType = session.user?.user_metadata?.user_type
+
+      // Only override redirect if it's the default dashboard path
+      if (redirectTo === '/dashboard' && userType) {
+        redirectPath = userType === UserType.COMPANY 
+          ? '/dashboard/company' 
+          : '/dashboard/user'
+      }
+
       toast({
         title: "Login successful!",
         description: "Welcome back.",
       })
 
-      router.push(redirectTo)
+      router.push(redirectPath)
       router.refresh()
     } catch (error) {
       console.error('Login error:', error)

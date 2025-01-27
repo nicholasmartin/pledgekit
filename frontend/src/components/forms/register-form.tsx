@@ -19,9 +19,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/use-toast"
 import { Loader2 } from "lucide-react"
-import { registerUser } from "@/lib/auth"
-import { UserType } from "@/lib/types/user"
-import { supabase } from "@/lib/supabase"
+import { registerUser } from "@/lib/supabase/client/auth"
+import { UserType } from "@/types/external/supabase"
 
 const formSchema = z.object({
   companyName: z.string().min(2, {
@@ -67,7 +66,7 @@ export function RegisterForm() {
         password: values.password,
         firstName: values.firstName,
         lastName: values.lastName,
-        userType: UserType.COMPANY_MEMBER,
+        userType: UserType.COMPANY,
         metadata: {
           company_name: values.companyName,
         },

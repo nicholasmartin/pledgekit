@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { LogOut } from "lucide-react"
-import { supabase } from "@/lib/supabase"
+import { useSupabase } from "@/lib/supabase/hooks"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/use-toast"
 import { NavigationConfig, NavItem } from "@/config/navigation"
@@ -17,15 +17,18 @@ interface NavigationSidebarProps {
 export function NavigationSidebar({ navigation }: NavigationSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
+  const supabase = useSupabase()
 
   const handleSignOut = async () => {
     try {
       await supabase.auth.signOut()
-      router.push("/")
+      router.refresh()
+      router.push('/login')
     } catch (error) {
+      console.error('Error signing out:', error)
       toast({
-        title: "Error signing out",
-        description: "Please try again",
+        title: "Error",
+        description: "There was a problem signing out. Please try again.",
         variant: "destructive",
       })
     }

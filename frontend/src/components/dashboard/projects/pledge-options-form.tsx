@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
 import { Separator } from "@/components/ui/separator"
-import { supabase } from "@/lib/supabase"
+import { useSupabase } from "@/lib/supabase/hooks"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -45,6 +45,7 @@ interface PledgeOption {
 
 export function PledgeOptionsForm({ projectId, onSave }: PledgeOptionsFormProps) {
   const router = useRouter()
+  const supabase = useSupabase()
   const [pledgeOptions, setPledgeOptions] = useState<PledgeOption[]>([])
   const [isEditing, setIsEditing] = useState(false)
 

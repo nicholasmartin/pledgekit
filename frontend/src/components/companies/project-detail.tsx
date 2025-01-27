@@ -9,11 +9,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { formatDistanceToNow } from "date-fns"
 import Link from "next/link"
 import ChevronLeft from "@/components/icons/chevron-left"
-import type { Project, ProjectWithCompany } from "@/types/domain/project"
+import { Project, ProjectWithPledges } from "@/types/domain/project/schema"
+import { Company } from "@/types/domain/company/schema"
 
 interface Props {
-  project: Project
-  company: ProjectWithCompany['company']
+  project: ProjectWithPledges
+  company: Company
   pledgeCount: number
 }
 
@@ -74,10 +75,10 @@ export function ProjectDetail({ project, company, pledgeCount }: Props) {
         </div>
 
         {/* Project Image */}
-        {project.header_image_url && (
+        {project.headerImageUrl && project.headerImageUrl !== '' && (
           <div className="relative aspect-video w-full overflow-hidden rounded-lg">
             <Image
-              src={project.header_image_url}
+              src={project.headerImageUrl}
               alt={project.title}
               fill
               className="object-cover"
@@ -146,18 +147,18 @@ export function ProjectDetail({ project, company, pledgeCount }: Props) {
             <Card className="p-6 space-y-4">
               <div className="space-y-2">
                 <div className="flex justify-between text-lg font-semibold">
-                  <span>{formatCurrency(project.amount_pledged)}</span>
+                  <span>{formatCurrency(project.amountPledged)}</span>
                   <span>of {formatCurrency(project.goal)}</span>
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
                   <div
                     className="h-full bg-primary"
-                    style={{ width: `${getProgressPercentage(project.amount_pledged, project.goal)}%` }}
+                    style={{ width: `${getProgressPercentage(project.amountPledged, project.goal)}%` }}
                   />
                 </div>
                 <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>{getProgressPercentage(project.amount_pledged, project.goal)}% funded</span>
-                  <span>Ends {new Date(project.end_date).toLocaleDateString('en-US', {
+                  <span>{getProgressPercentage(project.amountPledged, project.goal)}% funded</span>
+                  <span>Ends {new Date(project.endDate).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'numeric',
                     day: 'numeric'
@@ -167,7 +168,7 @@ export function ProjectDetail({ project, company, pledgeCount }: Props) {
             </Card>
 
             {/* Pledge Options */}
-            {project.pledge_options.map((option) => (
+            {project.pledgeOptions?.map((option) => (
               <Card key={option.id} className="p-6 space-y-4">
                 <div className="space-y-2">
                   <h3 className="text-xl font-semibold">{option.title}</h3>

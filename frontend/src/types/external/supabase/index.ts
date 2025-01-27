@@ -1,3 +1,4 @@
 export type { Database } from './database'
-export type { UserType, UserDetails } from './auth'
-export { isUserType, UserTypeValues } from './auth'
+export { UserType } from './auth'
+export type { UserDetails } from './auth'
+export { isUserType } from './auth'

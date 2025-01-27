@@ -18,6 +18,9 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import type { UserDetails } from '@/types/external/supabase'
 import { NotificationsMenu } from "./notifications-menu"
 import { LogoutButton } from "@/components/auth/logout-button"
+import { UserType } from '@/types/external/supabase/auth'
+import { redirect } from 'next/navigation'
+import { getUser, getUserType } from '@/lib/supabase/server/auth'
 
 interface MainNavClientProps {
   initialUserDetails: UserDetails | null
@@ -32,28 +35,48 @@ export function MainNavClient({ initialUserDetails }: MainNavClientProps) {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state change:', event)
+        
         if (event === 'SIGNED_OUT') {
           setUserDetails(null)
           router.refresh()
         } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           try {
             // Fetch latest user details
-            const response = await fetch('/api/user')
+            const response = await fetch('/api/user', {
+              // Prevent caching
+              cache: 'no-store',
+              headers: {
+                'Cache-Control': 'no-cache'
+              }
+            })
+            
             if (!response.ok) {
+              if (response.status === 401) {
+                // Session is invalid, clear state
+                setUserDetails(null)
+                return
+              }
               throw new Error('Failed to fetch user details')
             }
+            
             const details = await response.json()
             setUserDetails(details)
             router.refresh()
           } catch (error) {
             console.error('Error fetching user details:', error)
-            // Keep existing user details on error
+            // Don't clear user details on temporary errors
+            if (error.message === 'Failed to fetch user details') {
+              setUserDetails(null)
+            }
           }
         }
       }
     )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [supabase, router])
 
   const dashboardRoute = userDetails?.membership ? '/dashboard/company' : '/dashboard/user'

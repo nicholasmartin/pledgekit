@@ -7,7 +7,7 @@
 
 import { z } from 'zod'
 
-export const userTypeEnum = z.enum(['company_member', 'public_user'])
+export const userTypeEnum = z.enum(['company', 'user'])
 
 export const userMetadataSchema = z.object({
   user_type: userTypeEnum,

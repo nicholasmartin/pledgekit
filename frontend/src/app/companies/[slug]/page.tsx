@@ -4,15 +4,16 @@ import { useEffect, useState, useCallback } from "react"
 import { createClient } from "@/lib/supabase/client"
 import type { Database } from "@/types/generated/database"
 import { CompanyHeader } from "@/components/companies/company-header"
-import { ProjectCard } from "@/components/companies/project-card"
-import { useInView } from "react-intersection-observer"
-import { CompanyProjects } from "@/components/companies/company-projects"
+import { ProjectList } from "@/components/public/projects/project-list"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useInView } from "react-intersection-observer"
+import { toPublicCompany } from "@/types/transformers/company"
+import { PublicProject } from "@/types/domain/project/public"
 
 type Company = Database["public"]["Tables"]["companies"]["Row"]
 type Project = Database["public"]["Tables"]["projects"]["Row"] & {
-  company_slug: string
+  companies?: Database["public"]["Tables"]["companies"]["Row"]
 }
 
 export default function CompanyPage({ 
@@ -20,10 +21,10 @@ export default function CompanyPage({
   initialProjects 
 }: { 
   params: { slug: string }
-  initialProjects: Project[] 
+  initialProjects?: PublicProject[] 
 }) {
   const [company, setCompany] = useState<Company | null>(null)
-  const [projects, setProjects] = useState<Project[]>(initialProjects)
+  const [projects, setProjects] = useState<PublicProject[]>(initialProjects || [])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
   const [hasMore, setHasMore] = useState(true)
@@ -78,7 +79,7 @@ export default function CompanyPage({
       console.log("Fetching projects for company:", company.id, "range:", from, "to", to)
       const { data, error } = await supabase
         .from("projects")
-        .select("*, companies!inner(slug)")
+        .select("*, companies(slug)")
         .eq("company_id", company.id)
         .eq("status", "published")
         .order("created_at", { ascending: false })
@@ -88,18 +89,27 @@ export default function CompanyPage({
         throw error
       }
 
-      // Transform the data to include company_slug
-      const projectsWithSlug = data.map(project => ({
-        ...project,
-        company_slug: (project.companies as { slug: string }).slug
-      }))
+      const publicProjects = data
+        .filter(project => project.status === "published")
+        .map(project => ({
+          id: project.id,
+          title: project.title,
+          description: project.description || "",
+          goal: project.goal,
+          amount_pledged: project.amount_pledged || 0,
+          end_date: project.end_date,
+          header_image_url: project.header_image_url || "",
+          company_id: project.company_id,
+          company_slug: project.companies?.slug || "",
+          status: project.status as "published"
+        }))
 
-      console.log("Projects data received:", projectsWithSlug)
+      console.log("Projects data received:", publicProjects)
       if (data.length < 10) {
         setHasMore(false)
       }
 
-      setProjects(prev => [...prev, ...projectsWithSlug])
+      setProjects(prev => [...prev, ...publicProjects])
       setPage(prev => prev + 1)
       setError(null)
     } catch (err) {
@@ -149,41 +159,16 @@ export default function CompanyPage({
           </Alert>
         </div>
       ) : (
-        <>
-          {company && <CompanyHeader company={{
-            name: company.name,
-            description: company.description,
-            logo_url: null, 
-            branding: (company.settings as { branding?: any } | null)?.branding ?? {}
-          }} />}
-          
-          <main className="container py-8">
-            <CompanyProjects 
-              companyId={company?.id || ""} 
+        company && (
+          <>
+            <CompanyHeader company={toPublicCompany(company)} />
+            <ProjectList 
+              companyId={company.id} 
+              companySlug={company.slug}
               initialProjects={projects} 
             />
-            
-            {hasMore && (
-              <div
-                ref={ref}
-                className="mt-8 flex justify-center"
-              >
-                {loading && (
-                  <div className="space-y-4">
-                    <Skeleton className="h-32 w-full" />
-                    <Skeleton className="h-32 w-full" />
-                  </div>
-                )}
-              </div>
-            )}
-            
-            {!hasMore && projects.length === 0 && (
-              <div className="text-center text-muted-foreground">
-                No projects available at this time.
-              </div>
-            )}
-          </main>
-        </>
+          </>
+        )
       )}
     </div>
   )

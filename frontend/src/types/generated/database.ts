@@ -370,46 +370,46 @@ export type Database = {
       }
       projects: {
         Row: {
-          amount_pledged: number | null
+          amount_pledged: number
           company_id: string
           created_at: string | null
           description: string | null
           end_date: string
           goal: number
-          header_image_url: string | null
+          header_image_url: string
           id: string
           status: Database["public"]["Enums"]["project_status"]
           title: string
           updated_at: string | null
-          visibility: string | null
+          visibility: Database["public"]["Enums"]["project_visibility"]
         }
         Insert: {
-          amount_pledged?: number | null
+          amount_pledged?: number
           company_id: string
           created_at?: string | null
           description?: string | null
           end_date: string
           goal: number
-          header_image_url?: string | null
+          header_image_url?: string
           id?: string
           status?: Database["public"]["Enums"]["project_status"]
           title: string
           updated_at?: string | null
-          visibility?: string | null
+          visibility?: Database["public"]["Enums"]["project_visibility"]
         }
         Update: {
-          amount_pledged?: number | null
+          amount_pledged?: number
           company_id?: string
           created_at?: string | null
           description?: string | null
           end_date?: string
           goal?: number
-          header_image_url?: string | null
+          header_image_url?: string
           id?: string
           status?: Database["public"]["Enums"]["project_status"]
           title?: string
           updated_at?: string | null
-          visibility?: string | null
+          visibility?: Database["public"]["Enums"]["project_visibility"]
         }
         Relationships: [
           {
@@ -546,7 +546,8 @@ export type Database = {
     Enums: {
       pledge_status: "pending" | "completed" | "cancelled" | "failed"
       project_status: "published" | "draft" | "completed" | "cancelled"
-      user_type: "company_member" | "public_user"
+      project_visibility: "public" | "private"
+      user_type: "company" | "user"
     }
     CompositeTypes: {
       [_ in never]: never

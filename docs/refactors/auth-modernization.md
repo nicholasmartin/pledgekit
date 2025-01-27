@@ -84,6 +84,47 @@ After successful migration:
    - Clearer auth patterns
    - Better maintainability
 
+## Secure User Type Verification
+Currently, user type checks in middleware rely on session data from cookies, which triggers security warnings:
+```typescript
+// Current pattern (insecure)
+const { data: { session } } = await supabase.auth.getSession()
+const userType = session?.user?.user_metadata?.user_type
+```
+
+New pattern will use protected layouts for secure user verification:
+```typescript
+// Protected company layout example
+export default async function CompanyLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const supabase = createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) {
+    redirect('/login')
+  }
+  
+  // Secure user type verification
+  const userType = user.user_metadata?.user_type
+  const isCompanyUser = userType === UserType.COMPANY
+  
+  if (!isCompanyUser) {
+    redirect('/dashboard')
+  }
+
+  return children
+}
+```
+
+This approach:
+1. Uses `getUser()` for secure verification
+2. Performs type checks at the layout level
+3. Keeps middleware lightweight with basic session checks
+4. Reduces API calls by verifying once per layout mount
+
 ## Rollback Plan
 1. Keep old implementation during migration
 2. Test thoroughly in staging

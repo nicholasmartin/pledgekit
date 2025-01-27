@@ -19,9 +19,9 @@ import {
 import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/use-toast"
 import { Loader2 } from "lucide-react"
-import { registerUser } from "@/lib/auth"
-import { UserType } from "@/lib/types/user"
-import { supabase } from "@/lib/supabase"
+import { UserType } from "@/types/external/supabase"
+import { useSupabase } from "@/lib/supabase/hooks"
+import { AuthError } from "@supabase/supabase-js"
 
 const formSchema = z.object({
   firstName: z.string().min(2, {
@@ -41,6 +41,7 @@ const formSchema = z.object({
 export function PublicRegisterForm() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const supabase = useSupabase()
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -55,12 +56,24 @@ export function PublicRegisterForm() {
     setIsLoading(true)
     try {
       // Register user with public user type
-      await registerUser({
+      const { data, error } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
-        firstName: values.firstName,
-        lastName: values.lastName,
-        userType: UserType.PUBLIC_USER,
+      })
+
+      if (error) {
+        throw error
+      }
+
+      if (!data.user) {
+        throw new Error("Failed to create user account")
+      }
+
+      await supabase.from('user_profiles').insert({
+        id: data.user.id,
+        first_name: values.firstName,
+        last_name: values.lastName,
+        user_type: UserType.USER,
       })
 
       toast({
@@ -73,10 +86,16 @@ export function PublicRegisterForm() {
       console.error('Registration error:', error)
       
       // Handle specific error cases
-      if (error instanceof Error && error.message.includes('User already exists')) {
+      if (error instanceof AuthError && error.message.includes('User already exists')) {
         toast({
           title: "Registration Error",
           description: "An account with this email already exists. Please login or use a different email.",
+          variant: "destructive"
+        })
+      } else if (error instanceof AuthError && error.message === "Failed to create user account") {
+        toast({
+          title: "Registration Error",
+          description: "Failed to create user account. Please try again.",
           variant: "destructive"
         })
       } else {

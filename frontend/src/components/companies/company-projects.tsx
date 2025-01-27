@@ -1,3 +1,21 @@
+/**
+ * CompanyProjects Component
+ * 
+ * This component handles the display and infinite loading of published projects for a specific company.
+ * It is used in the public-facing view to show a company's active projects to potential backers.
+ * 
+ * Key Features:
+ * - Displays a grid of published projects with infinite scroll functionality
+ * - Shows loading skeletons during initial load and subsequent fetches
+ * - Handles error states with retry functionality
+ * - Implements type safety checks for project data
+ * - Only shows projects with "published" status
+ * 
+ * Note: This component is specifically for public viewing of published projects.
+ * It filters projects by company_id and published status, making it suitable
+ * for the public-facing parts of the application.
+ */
+
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
@@ -8,26 +26,13 @@ import { AlertCircle } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-
-export interface Project {
-  id: string
-  title: string
-  description: string | null
-  goal: number
-  amount_pledged: number | null
-  end_date: string
-  header_image_url: string | null
-  company_id: string
-  company_slug: string
-  created_at: string | null
-  updated_at: string | null
-  status: string | null
-  visibility: string | null
-}
+import type { Database } from "@/types/generated/database"
+import { PublicProject } from "@/types/domain/project/public"
+import { toPublicProject } from "@/types/transformers/project"
 
 interface CompanyProjectsProps {
   companyId: string
-  initialProjects?: Project[]
+  initialProjects?: PublicProject[]
 }
 
 const ITEMS_PER_PAGE = 9
@@ -53,7 +58,7 @@ function ProjectCardSkeleton() {
 }
 
 export function CompanyProjects({ companyId, initialProjects = [] }: CompanyProjectsProps) {
-  const [projects, setProjects] = useState<Project[]>(initialProjects)
+  const [projects, setProjects] = useState<PublicProject[]>(initialProjects)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [hasMore, setHasMore] = useState(true)
@@ -84,29 +89,9 @@ export function CompanyProjects({ companyId, initialProjects = [] }: CompanyProj
         throw new Error(error.message)
       }
 
-      // Type guard to ensure we only add valid Project objects
-      const validProjects = (data || []).filter((item): item is Project => {
-        const isValid = 
-          typeof item === 'object' && 
-          item !== null && 
-          'id' in item &&
-          'title' in item &&
-          'description' in item &&
-          'goal' in item &&
-          'amount_pledged' in item &&
-          'end_date' in item &&
-          'company_id' in item &&
-          'company_slug' in item &&
-          'created_at' in item &&
-          'updated_at' in item &&
-          'status' in item &&
-          'visibility' in item
-        
-        if (!isValid) {
-          console.error('Invalid project data:', item)
-        }
-        return isValid
-      })
+      const validProjects = (data || [])
+        .map(toPublicProject)
+        .filter((project): project is PublicProject => project !== null)
 
       setProjects(prev => [...prev, ...validProjects])
       setHasMore(validProjects.length === ITEMS_PER_PAGE)
@@ -157,11 +142,7 @@ export function CompanyProjects({ companyId, initialProjects = [] }: CompanyProj
         {projects.map((project) => (
           <ProjectCard 
             key={project.id} 
-            project={{
-              ...project,
-              amount_pledged: project.amount_pledged ?? 0
-            }}
-            companySlug={project.company_slug}
+            project={project}
           />
         ))}
         

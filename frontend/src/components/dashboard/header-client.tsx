@@ -10,9 +10,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useAuth } from "@/lib/auth-context"
-import { UserDetails } from "@/lib/server-auth"
-import { useEffect, useState } from 'react'
+import { useUser } from "@/lib/supabase/hooks"
+import type { UserDetails } from "@/types/external/supabase"
 import { LogoutButton } from "@/components/auth/logout-button"
 
 interface HeaderClientProps {
@@ -20,16 +19,9 @@ interface HeaderClientProps {
 }
 
 export function HeaderClient({ initialUserDetails }: HeaderClientProps) {
-  const { userDetails } = useAuth()
-  const [mounted, setMounted] = useState(false)
+  const { loading } = useUser()
   
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-  
-  const currentUserDetails = mounted ? userDetails : initialUserDetails
-  
-  if (!currentUserDetails) {
+  if (loading || !initialUserDetails) {
     return null
   }
 
@@ -37,7 +29,7 @@ export function HeaderClient({ initialUserDetails }: HeaderClientProps) {
     <header className="flex h-14 items-center gap-4 border-b bg-background px-6">
       <div className="flex-1">
         <h1 className="text-lg font-semibold">
-          {currentUserDetails.membership?.company?.name || ''}
+          {initialUserDetails.membership?.company?.name || ''}
         </h1>
       </div>
       <div className="flex items-center gap-4">
@@ -79,7 +71,7 @@ export function HeaderClient({ initialUserDetails }: HeaderClientProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>{currentUserDetails.user.email}</DropdownMenuLabel>
+            <DropdownMenuLabel>{initialUserDetails.user.email}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <LogoutButton />
           </DropdownMenuContent>

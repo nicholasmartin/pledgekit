@@ -1,6 +1,6 @@
-import { createServerSupabase } from "@/lib/server-supabase"
+import { createServer } from "@/lib/supabase/server"
 import { ProjectFormTabs } from "@/components/dashboard/projects/project-form-tabs"
-import { getUser } from "@/lib/server-auth"
+import { getUser } from "@/lib/supabase/server/auth"
 import { redirect } from "next/navigation"
 import { cookies } from "next/headers"
 
@@ -13,7 +13,7 @@ export default async function NewProjectPage() {
     redirect('/login')
   }
   
-  const supabase = createServerSupabase()
+  const supabase = createServer()
 
   // Get the company_id for the current user
   const { data: companyMember, error: memberError } = await supabase

@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { UserType } from '@/types/external/supabase/auth'
 
 // Add paths that require authentication
 const PROTECTED_PATHS = ['/dashboard']
@@ -12,6 +13,18 @@ const PUBLIC_USER_PATHS = ['/dashboard/user']
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
   
+  // Check if we're in a redirect loop using a URL parameter
+  const redirectCount = parseInt(req.nextUrl.searchParams.get('rc') || '0')
+  console.log('Middleware - Redirect count:', redirectCount)
+  
+  if (redirectCount >= 3) {
+    console.error('Middleware - Max redirects reached, stopping redirect chain')
+    // Remove the redirect count and return to dashboard
+    const fallbackUrl = new URL('/dashboard', req.url)
+    fallbackUrl.searchParams.delete('rc')
+    return NextResponse.redirect(fallbackUrl)
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -62,18 +75,22 @@ export async function middleware(req: NextRequest) {
     if (isAuthPath && session) {
       console.log('Middleware - Handling auth path with session')
       const userType = session.user?.user_metadata?.user_type
-      // If user type is not set, redirect to dashboard to handle setup
+      
+      // If user type is not set, allow access to complete setup
       if (!userType) {
-        console.log('Middleware - No user type, redirecting to dashboard')
-        const redirectUrl = new URL('/dashboard', req.url)
-        return NextResponse.redirect(redirectUrl)
+        console.log('Middleware - No user type, allowing auth path access')
+        return res
       }
-      // Get redirect URL from query params or use default based on user type
-      const redirectTo = req.nextUrl.searchParams.get('redirect') || 
-        (userType === 'company_member' ? '/dashboard/company' : '/dashboard/user')
-      console.log('Middleware - Redirecting to:', redirectTo)
-      const redirectUrl = new URL(redirectTo, req.url)
-      return NextResponse.redirect(redirectUrl)
+
+      // Only redirect if no specific redirect parameter is set
+      if (!req.nextUrl.searchParams.has('redirect')) {
+        const defaultRedirect = userType === UserType.COMPANY ? '/dashboard/company' : '/dashboard/user'
+        console.log('Middleware - Redirecting to default path:', defaultRedirect)
+        const redirectUrl = new URL(defaultRedirect, req.url)
+        const response = NextResponse.redirect(redirectUrl)
+        response.headers.set('x-redirect-count', (redirectCount + 1).toString())
+        return response
+      }
     }
 
     // Handle protected routes
@@ -89,38 +106,33 @@ export async function middleware(req: NextRequest) {
 
       const userType = session.user?.user_metadata?.user_type
       
-      // If user type is not set, allow access only to dashboard for setup
-      if (!userType && path !== '/dashboard') {
-        console.log('Middleware - No user type, redirecting to dashboard')
-        return NextResponse.redirect(new URL('/dashboard', req.url))
+      // If user type is not set or at base dashboard, allow access
+      if (!userType || path === '/dashboard') {
+        console.log('Middleware - No user type or base dashboard, allowing access')
+        return res
       }
 
+      // Create redirect URL with incremented count
+      const createRedirectUrl = (path: string) => {
+        const url = new URL(path, req.url)
+        url.searchParams.set('rc', (redirectCount + 1).toString())
+        return url
+      }
+
+      // Helper to check if user is a company user (handles both old and new values)
+      const isCompanyUser = (type: string | undefined) => 
+        type === UserType.COMPANY || type === 'company_member'
+
       // Handle company-specific paths
-      if (isCompanyPath && userType !== 'company_member') {
-        console.log('Middleware - Not company member, redirecting to user dashboard')
-        return NextResponse.redirect(new URL('/dashboard/user', req.url))
+      if (isCompanyPath && !isCompanyUser(userType)) {
+        console.log('Middleware - Not company user, redirecting to user dashboard')
+        return NextResponse.redirect(createRedirectUrl('/dashboard/user'))
       }
 
       // Handle public user-specific paths
-      if (isPublicUserPath && userType !== 'public_user') {
-        console.log('Middleware - Not public user, redirecting to company dashboard')
-        return NextResponse.redirect(new URL('/dashboard/company', req.url))
-      }
-
-      // Redirect root dashboard to appropriate type-specific dashboard
-      if (path === '/dashboard') {
-        if (!userType) {
-          // Let the dashboard page handle user type setup
-          console.log('Middleware - No user type, letting dashboard handle setup')
-          return res
-        }
-        if (userType === 'company_member') {
-          console.log('Middleware - Redirecting to company dashboard')
-          return NextResponse.redirect(new URL('/dashboard/company', req.url))
-        } else {
-          console.log('Middleware - Redirecting to user dashboard')
-          return NextResponse.redirect(new URL('/dashboard/user', req.url))
-        }
+      if (isPublicUserPath && isCompanyUser(userType)) {
+        console.log('Middleware - Company user accessing user path, redirecting to company dashboard')
+        return NextResponse.redirect(createRedirectUrl('/dashboard/company'))
       }
     }
 

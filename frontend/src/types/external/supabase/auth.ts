@@ -1,18 +1,21 @@
 import type { Database } from './database'
 
 /**
- * Constant values for user types
- */
-export const UserTypeValues = {
-  COMPANY: 'company' as const,
-  USER: 'user' as const,
-} as const
-
-/**
- * User type definition for the application.
+ * User type enum for the application.
  * Used to determine user roles and access levels.
  */
-export type UserType = typeof UserTypeValues[keyof typeof UserTypeValues]
+export enum UserType {
+  COMPANY = 'company',
+  USER = 'user'
+}
+
+/**
+ * Constant values for user types, matching the UserType enum
+ */
+export const UserTypeValues = {
+  COMPANY: UserType.COMPANY,
+  USER: UserType.USER
+} as const
 
 /**
  * Extended user details including company membership information.
@@ -38,5 +41,5 @@ export type UserDetails = {
  * Type guard to check if a value is a valid UserType
  */
 export function isUserType(value: unknown): value is UserType {
-  return value === UserTypeValues.COMPANY || value === UserTypeValues.USER
+  return value === UserType.COMPANY || value === UserType.USER
 }

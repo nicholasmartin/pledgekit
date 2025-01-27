@@ -110,7 +110,7 @@ export function ProjectFormTabs({ companyId, project: initialProject }: ProjectF
       if (error) throw error
 
       router.refresh()
-      router.push(`/projects/${projectId}`)
+      router.push(`/dashboard/company/projects/${projectId}`)
     } catch (err) {
       console.error("Error publishing project:", err)
       setError(err instanceof Error ? err : new Error('Failed to publish project'))

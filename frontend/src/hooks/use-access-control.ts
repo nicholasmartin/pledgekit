@@ -2,11 +2,7 @@ import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useSupabase } from "@/lib/supabase/hooks"
 import type { Database } from "@/types/generated/database"
-
-export enum UserType {
-  COMPANY_MEMBER = 'company_member',
-  PUBLIC_USER = 'public_user',
-}
+import { UserType } from "@/types/external/supabase/auth"
 
 interface UserMetadata {
   user_type: UserType
@@ -84,9 +80,9 @@ export function useAccessControl(): UseAccessControlReturn {
 
   const getDashboardPath = useCallback((): string => {
     switch (userType) {
-      case UserType.COMPANY_MEMBER:
+      case UserType.COMPANY:
         return '/dashboard/company'
-      case UserType.PUBLIC_USER:
+      case UserType.USER:
         return '/dashboard/user'
       default:
         return '/auth/login'

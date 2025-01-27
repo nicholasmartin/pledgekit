@@ -1,4 +1,4 @@
-import { getUserDetails } from '@/lib/server-auth'
+import { getUserDetails } from '@/lib/supabase/server/auth'
 import { MainNavClient } from './main-nav-client'
 
 export async function MainNav() {

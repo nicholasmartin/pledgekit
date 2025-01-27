@@ -1,7 +1,7 @@
 import { type User } from '@supabase/supabase-js'
 import { SupabaseError } from '../utils/errors'
 import { createClient } from './client'
-import { UserType, UserTypeValues } from '@/types/external/supabase'
+import { UserType, UserTypeValues } from '@/types/external/supabase/auth'
 
 /**
  * Get the current user session.

@@ -12,7 +12,7 @@ import {
   PlusSquare,
   LineChart,
 } from "lucide-react"
-import { supabase } from "@/lib/supabase"
+import { useSupabase } from "@/lib/supabase/hooks"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/use-toast"
@@ -29,14 +29,14 @@ const sidebarItems = [
     icon: ListTodo,
   },
   {
+    title: "Team",
+    href: "/dashboard/team",
+    icon: Users,
+  },
+  {
     title: "Analytics",
     href: "/dashboard/analytics",
     icon: LineChart,
-  },
-  {
-    title: "Users",
-    href: "/dashboard/users",
-    icon: Users,
   },
   {
     title: "Settings",
@@ -48,53 +48,53 @@ const sidebarItems = [
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
+  const supabase = useSupabase()
 
   const handleSignOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut()
-      if (error) throw error
-      toast({
-        title: "Signed out successfully",
-      })
-      router.push("/login")
+      await supabase.auth.signOut()
+      router.refresh()
+      router.push('/login')
     } catch (error) {
-      console.error("Error signing out:", error)
+      console.error('Error signing out:', error)
       toast({
-        title: "Error signing out",
+        title: "Error",
+        description: "There was a problem signing out. Please try again.",
         variant: "destructive",
       })
     }
   }
 
   return (
-    <div className="flex h-screen flex-col justify-between border-r bg-background px-4 py-6">
-      <div>
-        <div className="space-y-1 py-4">
-          {sidebarItems.map((item) => (
+    <nav className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        {sidebarItems.map((item, index) => {
+          const isActive = pathname === item.href
+          return (
             <Link
-              key={item.href}
+              key={index}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                pathname === item.href
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                "group flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
+                isActive ? "bg-accent" : "transparent"
               )}
             >
-              <item.icon className="h-4 w-4" />
-              {item.title}
+              <item.icon className="mr-2 h-4 w-4" />
+              <span>{item.title}</span>
             </Link>
-          ))}
-        </div>
+          )
+        })}
       </div>
-      <Button
-        variant="ghost"
-        className="flex w-full items-center gap-3 px-3"
-        onClick={handleSignOut}
-      >
-        <LogOut className="h-4 w-4" />
-        Sign Out
-      </Button>
-    </div>
+      <div className="mt-auto">
+        <Button
+          variant="ghost"
+          className="w-full justify-start"
+          onClick={handleSignOut}
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          <span>Log out</span>
+        </Button>
+      </div>
+    </nav>
   )
 }

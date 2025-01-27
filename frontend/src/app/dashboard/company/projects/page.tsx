@@ -1,9 +1,9 @@
-import { createServerSupabase } from "@/lib/server-supabase"
+import { createServer } from "@/lib/supabase/server"
 import { ProjectsClient } from "@/components/dashboard/projects/projects-client"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { PlusIcon } from "lucide-react"
-import { getUser } from "@/lib/server-auth"
+import { getUser } from "@/lib/supabase/server/auth"
 import { redirect } from "next/navigation"
 import { cookies } from "next/headers"
 
@@ -16,7 +16,7 @@ export default async function ProjectsPage() {
     redirect('/login')
   }
   
-  const supabase = createServerSupabase()
+  const supabase = createServer()
   
   // Get the company_id for the current user from company_members table
   const { data: companyMember, error: memberError } = await supabase

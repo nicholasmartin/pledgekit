@@ -6,22 +6,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { PublicProject } from "@/types/domain/project/public"
 
 interface ProjectCardProps {
-  project: {
-    id: string
-    title: string
-    description: string | null
-    goal: number
-    amount_pledged: number
-    end_date: string
-    header_image_url: string | null
-    company_slug: string
-  }
-  companySlug: string
+  project: PublicProject
 }
 
-export function ProjectCard({ project, companySlug }: ProjectCardProps) {
+export function ProjectCard({ project }: ProjectCardProps) {
   const progress = (project.amount_pledged / project.goal) * 100
   const endDate = new Date(project.end_date)
   const now = new Date()
@@ -30,7 +21,7 @@ export function ProjectCard({ project, companySlug }: ProjectCardProps) {
   )
 
   return (
-    <Link href={`/companies/${companySlug}/projects/${project.id}`}>
+    <Link href={`/companies/${project.company_slug}/projects/${project.id}`}>
       <Card className="overflow-hidden transition-shadow hover:shadow-lg">
         {project.header_image_url && (
           <div className="aspect-video w-full overflow-hidden">

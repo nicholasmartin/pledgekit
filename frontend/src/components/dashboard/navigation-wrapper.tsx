@@ -11,8 +11,10 @@ export function NavigationWrapper() {
   const { user } = useUser()
 
   useEffect(() => {
-    const userType = user?.user_metadata?.user_type as UserType
-    setNavigation(userType === 'company' ? companyNavigation : userNavigation)
+    const userType = user?.user_metadata?.user_type
+    // Handle both old 'company_member' and new 'company' values
+    const isCompanyUser = userType === 'company' || userType === 'company_member'
+    setNavigation(isCompanyUser ? companyNavigation : userNavigation)
   }, [user])
 
   return <NavigationSidebar navigation={navigation} />
