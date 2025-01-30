@@ -73,7 +73,7 @@ export function ProjectCannyPosts({ projectId }: ProjectCannyPostsProps) {
         throw new Error("Failed to fetch Canny posts")
       }
 
-      const cannyPosts = await response.json()
+      const { posts: cannyPosts } = await response.json()
       setPosts(cannyPosts)
     } catch (error) {
       console.error("Error loading posts:", error)

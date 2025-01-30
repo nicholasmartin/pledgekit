@@ -18,24 +18,26 @@ interface ShellProps {
  */
 export function DashboardShell({ userType, children, className }: ShellProps) {
   return (
-    <div className={cn('flex min-h-screen flex-col', className)}>
-      <div className="flex flex-1">
-        <aside className="hidden w-64 shrink-0 border-r border-border lg:block">
-          <Navigation userType={userType} className="py-6" />
+    <div className={cn('flex h-screen flex-col', className)}>
+      <header className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background">
+        <div className="flex h-16 items-center px-4">
+          <MobileNav userType={userType} />
+          <Header userType={userType} />
+        </div>
+      </header>
+
+      <div className="flex flex-1 pt-16">
+        <aside className="hidden lg:block w-64 border-r border-border">
+          <div className="fixed w-64 top-16 bottom-0 overflow-y-auto">
+            <Navigation userType={userType} className="py-6" />
+          </div>
         </aside>
         
-        <div className="flex flex-1 flex-col">
-          <header className="sticky top-0 z-50 border-b border-border bg-background">
-            <div className="flex h-16 items-center">
-              <MobileNav userType={userType} />
-              <Header userType={userType} />
-            </div>
-          </header>
-          
-          <main className="flex-1 space-y-4 p-8">
+        <main className="flex-1 overflow-auto">
+          <div className="space-y-4 p-8">
             {children}
-          </main>
-        </div>
+          </div>
+        </main>
       </div>
     </div>
   )
