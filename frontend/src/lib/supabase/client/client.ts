@@ -19,9 +19,11 @@ export const createClient = () => {
     return client
   } catch (error) {
     throw new SupabaseError(
-      'Failed to initialize Supabase client',
-      'CLIENT_INIT_ERROR',
-      error
+      {
+        message: 'Failed to initialize Supabase client',
+        code: 'CLIENT_INIT_ERROR',
+        cause: error
+      }
     )
   }
 }

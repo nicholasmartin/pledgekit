@@ -29,10 +29,10 @@ export const createServer = cache(() => {
       }
     )
   } catch (error) {
-    throw new SupabaseError(
-      'Failed to initialize Supabase server client',
-      'SERVER_INIT_ERROR',
-      error
-    )
+    throw new SupabaseError({
+      message: 'Failed to initialize Supabase server client',
+      code: 'SERVER_INIT_ERROR',
+      cause: error
+    })
   }
 })

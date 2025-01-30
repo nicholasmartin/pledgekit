@@ -38,13 +38,13 @@ export const companyNavigation: NavigationConfig = {
     },
     {
       title: "Analytics",
-      href: "/dashboard/company/analytics",
+      href: "#",
       icon: LineChart,
       description: "View detailed analytics and insights",
     },
     {
       title: "Users",
-      href: "/dashboard/company/users",
+      href: "#",
       icon: Users,
       description: "Manage user access and roles",
     },

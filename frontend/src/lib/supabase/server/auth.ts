@@ -113,7 +113,7 @@ export const getUserDetails = cache(async (supabase?: SupabaseClient | null): Pr
     // Transform the response to match expected format
     const transformedMembership = membership ? {
       role: membership.role,
-      company: membership.companies
+      company: Array.isArray(membership.companies) ? membership.companies : [membership.companies || {}]
     } : null
 
     return toUserDetails(
