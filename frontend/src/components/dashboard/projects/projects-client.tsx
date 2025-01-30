@@ -101,6 +101,15 @@ export function ProjectsClient({ projects, limit }: ProjectsClientProps) {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {displayedProjects.map((project) => (
           <Card key={project.id}>
+            {project.header_image_url && (
+              <div className="h-48 relative rounded-lg overflow-hidden mb-4">
+                <img
+                  src={project.header_image_url}
+                  alt={project.title || "Project Image"}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-lg font-bold">
                 <Link href={`/dashboard/company/projects/${project.id}`} className="hover:underline">

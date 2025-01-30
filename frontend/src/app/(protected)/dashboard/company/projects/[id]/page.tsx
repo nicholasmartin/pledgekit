@@ -32,7 +32,7 @@ export default async function ProjectPage({ params }: PageParams) {
 
   return (
     <div className="container mx-auto py-8">
-      <ProjectPreview 
+      <ProjectPreview
         project={transformedProject}
         pledgeOptions={(project.pledge_options || []).map(toPledgeOption)}
       />

@@ -69,7 +69,7 @@ export default async function ProjectsPage() {
         </Button>
       </div>
       
-      <ProjectsClient 
+      <ProjectsClient
         projects={projects || []}
       />
     </div>
