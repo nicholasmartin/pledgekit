@@ -1,18 +1,23 @@
+/**
+ * @deprecated This file is scheduled for removal in the future RBAC update.
+ * The UserRole enum has been moved to @/types/auth/roles
+ * Other functionality will be reimplemented in the new RBAC system.
+ */
+
 import { createClient } from '@supabase/supabase-js'
 import { Database } from '@/types/generated/database'
+import { UserRole } from '@/types/auth/roles'
 
-export enum UserRole {
-  COMPANY_OWNER = 'company_owner',
-  COMPANY_MEMBER = 'company_member',
-  PUBLIC_USER = 'public_user',
-  PUBLIC_USER_PRIVATE_ACCESS = 'public_user_private_access'
-}
+/** @deprecated Use new RBAC system when available */
+export { UserRole }
 
+/** @deprecated Use new RBAC system when available */
 export interface ProjectAccessResult {
   canAccess: boolean;
   reason?: string;
 }
 
+/** @deprecated Use new RBAC system when available */
 export class AccessControlManager {
   private supabase: ReturnType<typeof createClient<Database>>;
 

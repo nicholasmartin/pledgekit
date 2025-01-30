@@ -8,6 +8,7 @@
 import { Tables } from '../helpers/database'
 import { User, UserWithCompany } from '../domain/user/types'
 import { userSchema } from '../domain/user/schema'
+import { UserDetails } from '../external/supabase/auth'
 
 export function toUser(
   dbUser: Tables<'user_profiles'> & {
@@ -61,5 +62,33 @@ export function toUserWithCompany(
       name: company.name,
       slug: company.slug
     } : undefined
+  }
+}
+
+/**
+ * Transform raw Supabase response to UserDetails type
+ * Handles the company array -> single object transformation
+ */
+export function toUserDetails(
+  user: {
+    id: string
+    email?: string
+    user_metadata: any
+  },
+  membership: {
+    role: string
+    company: Array<{ name: string }>
+  } | null
+): UserDetails {
+  return {
+    user: {
+      id: user.id,
+      email: user.email,
+      user_metadata: user.user_metadata
+    },
+    membership: membership ? {
+      role: membership.role,
+      company: membership.company[0]  // Transform array to single object
+    } : null
   }
 }

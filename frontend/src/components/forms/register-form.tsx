@@ -19,7 +19,6 @@ import {
 import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/use-toast"
 import { Loader2 } from "lucide-react"
-import { registerUser } from "@/lib/supabase/client/auth"
 import { UserType } from "@/types/external/supabase"
 
 const formSchema = z.object({
@@ -60,32 +59,36 @@ export function RegisterForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true)
     try {
-      // Register user with company member type
-      await registerUser({
-        email: values.email,
-        password: values.password,
-        firstName: values.firstName,
-        lastName: values.lastName,
-        userType: UserType.COMPANY,
-        metadata: {
-          company_name: values.companyName,
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          ...values,
+          userType: UserType.COMPANY,
+        }),
       })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Registration failed")
+      }
 
       toast({
         title: "Registration successful!",
-        description: "Please check your email to verify your account before logging in.",
+        description: data.message || "Please check your email to verify your account before logging in.",
       })
 
       router.push("/login")
     } catch (error) {
-      console.error('Registration error:', error)
+      console.error("Registration error:", error)
 
-      // Handle specific error cases
-      if (error instanceof Error && error.message.includes('User already exists')) {
+      if (error instanceof Error) {
         toast({
           title: "Registration Error",
-          description: "An account with this email already exists. Please login or use a different email.",
+          description: error.message,
           variant: "destructive",
         })
       } else {

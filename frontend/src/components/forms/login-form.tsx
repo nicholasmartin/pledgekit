@@ -8,7 +8,6 @@ import * as z from "zod"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Form,
   FormControl,
@@ -19,7 +18,6 @@ import {
 } from "@/components/ui/form"
 import { toast } from "@/components/ui/use-toast"
 import Link from "next/link"
-import { useSupabase } from "@/lib/supabase/hooks"
 import { UserType } from "@/types/external/supabase/auth"
 
 const formSchema = z.object({
@@ -31,11 +29,15 @@ const formSchema = z.object({
   }),
 })
 
+interface LoginError extends Error {
+  status?: number
+}
+
 export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectTo = searchParams.get('redirect') || '/dashboard'
-  const supabase = useSupabase()
+  const [isLoading, setIsLoading] = React.useState(false)
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -47,25 +49,27 @@ export function LoginForm() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: values.email,
-        password: values.password,
+      setIsLoading(true)
+
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(values),
       })
 
-      if (error) {
-        throw error
-      }
+      const data = await response.json()
 
-      // Get the session to ensure it's established
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-      
-      if (sessionError || !session) {
-        throw new Error("Failed to establish session")
+      if (!response.ok) {
+        const error = new Error(data.error || 'Login failed') as LoginError
+        error.status = response.status
+        throw error
       }
 
       // Determine redirect path based on user type
       let redirectPath = redirectTo
-      const userType = session.user?.user_metadata?.user_type
+      const userType = data.userType
 
       // Only override redirect if it's the default dashboard path
       if (redirectTo === '/dashboard' && userType) {
@@ -83,11 +87,24 @@ export function LoginForm() {
       router.refresh()
     } catch (error) {
       console.error('Login error:', error)
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Invalid email or password.",
-        variant: "destructive",
-      })
+      const err = error as LoginError
+      
+      // Handle rate limiting specifically
+      if (err.status === 429) {
+        toast({
+          title: "Too Many Attempts",
+          description: "Please wait before trying again.",
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: err.message || "Invalid email or password.",
+          variant: "destructive",
+        })
+      }
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -101,7 +118,12 @@ export function LoginForm() {
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input placeholder="name@company.com" type="email" {...field} />
+                <Input 
+                  placeholder="name@company.com" 
+                  type="email" 
+                  disabled={isLoading}
+                  {...field} 
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -114,14 +136,21 @@ export function LoginForm() {
             <FormItem>
               <FormLabel>Password</FormLabel>
               <FormControl>
-                <Input placeholder="Enter your password" type="password" {...field} />
+                <Input 
+                  placeholder="Enter your password" 
+                  type="password" 
+                  disabled={isLoading}
+                  {...field} 
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
         <div className="flex flex-col space-y-4">
-          <Button type="submit">Sign In</Button>
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? "Signing in..." : "Sign In"}
+          </Button>
           <div className="text-sm text-center text-muted-foreground">
             Don't have an account?{" "}
             <Link href="/register" className="text-primary hover:underline">

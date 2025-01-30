@@ -1,5 +1,5 @@
 import { ProtectedLayout } from '@/components/layouts/protected-layout'
-import { DashboardLayout } from '@/components/layouts/dashboard-layout'
+import { DashboardShell } from '@/components/dashboard/shell'
 import { UserType } from '@/types/external/supabase/auth'
 
 export default function CompanyDashboardLayout({
@@ -9,7 +9,7 @@ export default function CompanyDashboardLayout({
 }) {
   return (
     <ProtectedLayout requiredUserType={UserType.COMPANY}>
-      <DashboardLayout>{children}</DashboardLayout>
+      <DashboardShell userType={UserType.COMPANY}>{children}</DashboardShell>
     </ProtectedLayout>
   )
 }

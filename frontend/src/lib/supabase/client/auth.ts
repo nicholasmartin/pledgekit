@@ -1,7 +1,7 @@
 import { type User } from '@supabase/supabase-js'
-import { SupabaseError } from '../utils/errors'
+import { AuthError } from '../utils/errors'
 import { createClient } from './client'
-import { UserType, UserTypeValues } from '@/types/external/supabase/auth'
+import { UserType, isUserType } from '@/types/external/supabase/auth'
 
 /**
  * Get the current user session.
@@ -13,20 +13,21 @@ export const getSession = async () => {
     const { data: { session }, error } = await supabase.auth.getSession()
 
     if (error) {
-      throw new SupabaseError(
-        'Error getting session',
-        'AUTH_GET_SESSION_ERROR',
-        error
-      )
+      throw new AuthError({
+        message: 'Failed to get session',
+        code: 'AUTH_SESSION_ERROR',
+        cause: error
+      })
     }
 
     return session
   } catch (error) {
-    throw new SupabaseError(
-      'Failed to get session',
-      'AUTH_GET_SESSION_ERROR',
-      error
-    )
+    if (error instanceof AuthError) throw error
+    throw new AuthError({
+      message: 'Unexpected error getting session',
+      code: 'AUTH_UNEXPECTED_ERROR',
+      cause: error
+    })
   }
 }
 
@@ -39,11 +40,12 @@ export const getUser = async (): Promise<User | null> => {
     const session = await getSession()
     return session?.user ?? null
   } catch (error) {
-    throw new SupabaseError(
-      'Failed to get user',
-      'AUTH_GET_USER_ERROR',
-      error
-    )
+    if (error instanceof AuthError) throw error
+    throw new AuthError({
+      message: 'Unexpected error getting user',
+      code: 'AUTH_UNEXPECTED_ERROR',
+      cause: error
+    })
   }
 }
 
@@ -59,20 +61,21 @@ export const signInWithPassword = async (email: string, password: string) => {
     })
 
     if (error) {
-      throw new SupabaseError(
-        'Error signing in',
-        'AUTH_SIGN_IN_ERROR',
-        error
-      )
+      throw new AuthError({
+        message: 'Invalid email or password',
+        code: 'AUTH_INVALID_CREDENTIALS',
+        cause: error
+      })
     }
 
     return data
   } catch (error) {
-    throw new SupabaseError(
-      'Failed to sign in',
-      'AUTH_SIGN_IN_ERROR',
-      error
-    )
+    if (error instanceof AuthError) throw error
+    throw new AuthError({
+      message: 'Unexpected error during sign in',
+      code: 'AUTH_UNEXPECTED_ERROR',
+      cause: error
+    })
   }
 }
 
@@ -97,20 +100,21 @@ export const signUpWithPassword = async (
     })
 
     if (error) {
-      throw new SupabaseError(
-        'Error signing up',
-        'AUTH_SIGN_UP_ERROR',
-        error
-      )
+      throw new AuthError({
+        message: 'Failed to create account',
+        code: 'AUTH_SIGN_UP_ERROR',
+        cause: error
+      })
     }
 
     return data
   } catch (error) {
-    throw new SupabaseError(
-      'Failed to sign up',
-      'AUTH_SIGN_UP_ERROR',
-      error
-    )
+    if (error instanceof AuthError) throw error
+    throw new AuthError({
+      message: 'Unexpected error during sign up',
+      code: 'AUTH_UNEXPECTED_ERROR',
+      cause: error
+    })
   }
 }
 
@@ -151,20 +155,21 @@ export async function registerUser({
     })
 
     if (error) {
-      throw new SupabaseError(
-        'Error registering user',
-        'AUTH_REGISTER_ERROR',
-        error
-      )
+      throw new AuthError({
+        message: 'Failed to register user',
+        code: 'AUTH_SIGN_UP_ERROR',
+        cause: error
+      })
     }
 
     return data
   } catch (error) {
-    throw new SupabaseError(
-      'Error registering user',
-      'AUTH_REGISTER_ERROR',
-      error
-    )
+    if (error instanceof AuthError) throw error
+    throw new AuthError({
+      message: 'Unexpected error during registration',
+      code: 'AUTH_UNEXPECTED_ERROR',
+      cause: error
+    })
   }
 }
 
@@ -173,47 +178,54 @@ export async function registerUser({
  */
 export async function getUserType(): Promise<UserType> {
   try {
-    const supabase = createClient()
-    const { data: { user }, error } = await supabase.auth.getUser()
-
-    if (error) {
-      throw new SupabaseError(
-        'Error getting user type',
-        'AUTH_GET_USER_TYPE_ERROR',
-        error
-      )
+    const user = await getUser()
+    if (!user) {
+      throw new AuthError({
+        message: 'No authenticated user found',
+        code: 'AUTH_UNAUTHORIZED'
+      })
     }
 
-    return (user?.user_metadata?.user_type as UserType) || UserTypeValues.USER
+    const userType = user.user_metadata?.user_type
+    if (!userType || !isUserType(userType)) {
+      throw new AuthError({
+        message: 'Invalid or missing user type',
+        code: 'AUTH_INVALID_USER_TYPE'
+      })
+    }
+
+    return userType
   } catch (error) {
-    throw new SupabaseError(
-      'Error getting user type',
-      'AUTH_GET_USER_TYPE_ERROR',
-      error
-    )
+    if (error instanceof AuthError) throw error
+    throw new AuthError({
+      message: 'Unexpected error getting user type',
+      code: 'AUTH_UNEXPECTED_ERROR',
+      cause: error
+    })
   }
 }
 
 /**
  * Sign out the current user
  */
-export const signOut = async () => {
+export async function signOut() {
   try {
     const supabase = createClient()
     const { error } = await supabase.auth.signOut()
 
     if (error) {
-      throw new SupabaseError(
-        'Error signing out',
-        'AUTH_SIGN_OUT_ERROR',
-        error
-      )
+      throw new AuthError({
+        message: 'Failed to sign out',
+        code: 'AUTH_SIGN_OUT_ERROR',
+        cause: error
+      })
     }
   } catch (error) {
-    throw new SupabaseError(
-      'Failed to sign out',
-      'AUTH_SIGN_OUT_ERROR',
-      error
-    )
+    if (error instanceof AuthError) throw error
+    throw new AuthError({
+      message: 'Unexpected error during sign out',
+      code: 'AUTH_UNEXPECTED_ERROR',
+      cause: error
+    })
   }
 }

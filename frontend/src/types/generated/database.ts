@@ -218,21 +218,21 @@ export type Database = {
           created_at: string | null
           id: string
           role: string
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           company_id: string
           created_at?: string | null
           id?: string
           role: string
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           company_id?: string
           created_at?: string | null
           id?: string
           role?: string
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: [
           {

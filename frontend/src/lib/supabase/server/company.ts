@@ -1,5 +1,5 @@
 import { cache } from 'react'
-import { SupabaseError } from '../utils/errors'
+import { DatabaseError } from '../utils/errors'
 import { createServer } from './server'
 
 /**
@@ -16,27 +16,28 @@ export const getCompany = cache(async (slug: string) => {
       .single()
 
     if (error) {
-      throw new SupabaseError(
-        'Error fetching company',
-        'COMPANY_FETCH_ERROR',
-        error
-      )
+      throw new DatabaseError({
+        message: 'Error fetching company',
+        code: 'DB_QUERY_ERROR',
+        cause: error
+      })
     }
 
     if (!data) {
-      throw new SupabaseError(
-        'Company not found',
-        'COMPANY_NOT_FOUND_ERROR'
-      )
+      throw new DatabaseError({
+        message: 'Company not found',
+        code: 'DB_QUERY_ERROR'
+      })
     }
 
     return data
   } catch (error) {
-    throw new SupabaseError(
-      'Failed to get company',
-      'GET_COMPANY_ERROR',
-      error
-    )
+    if (error instanceof DatabaseError) throw error
+    throw new DatabaseError({
+      message: 'Failed to get company',
+      code: 'DB_QUERY_ERROR',
+      cause: error
+    })
   }
 })
 
@@ -59,11 +60,11 @@ export const getCompanyProjects = cache(async (companyId: string, page: number =
       .range(from, to)
 
     if (error) {
-      throw new SupabaseError(
-        'Error fetching company projects',
-        'COMPANY_PROJECTS_ERROR',
-        error
-      )
+      throw new DatabaseError({
+        message: 'Error fetching company projects',
+        code: 'DB_QUERY_ERROR',
+        cause: error
+      })
     }
 
     return data.map(project => ({
@@ -71,10 +72,11 @@ export const getCompanyProjects = cache(async (companyId: string, page: number =
       company_slug: (project.companies as { slug: string }).slug
     }))
   } catch (error) {
-    throw new SupabaseError(
-      'Failed to get company projects',
-      'GET_COMPANY_PROJECTS_ERROR',
-      error
-    )
+    if (error instanceof DatabaseError) throw error
+    throw new DatabaseError({
+      message: 'Failed to get company projects',
+      code: 'DB_QUERY_ERROR',
+      cause: error
+    })
   }
 })

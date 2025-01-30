@@ -3,7 +3,7 @@ import { getUser } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { Card } from '@/components/ui/card'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { DashboardHeader } from '@/components/ui/dashboard-header'
 import { formatCurrency } from '@/lib/utils'
 
 export default async function UserDashboard() {

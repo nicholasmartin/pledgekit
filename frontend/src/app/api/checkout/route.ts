@@ -1,8 +1,17 @@
-import { NextResponse } from 'next/server'
+import { createRouteHandlerClient, getClientIp, rateLimit } from "@/lib/supabase/server/route-handlers"
+import { NextResponse } from "next/server"
 import { cookies } from 'next/headers'
 import { createServer } from '@/lib/supabase/server'
 import { stripe } from '@/lib/stripe'
 import { Database } from '@/types/generated/database'
+import { SupabaseError } from "@/lib/supabase/utils/errors"
+
+/**
+ * Rate limit configuration for payment operations
+ */
+const RATE_LIMITS = {
+  checkout: { limit: 5, window: 300 }, // 5 attempts per 5 minutes
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -11,11 +20,38 @@ type CreateCheckoutSessionData = {
   projectId: string
 }
 
+/**
+ * POST /api/checkout
+ * Creates a new checkout session for pledges
+ */
 export async function POST(request: Request) {
+  // Apply strict rate limiting for payment operations
+  const ip = getClientIp(request)
+  const { success } = await rateLimit(
+    ip,
+    "checkout-create",
+    RATE_LIMITS.checkout.limit,
+    RATE_LIMITS.checkout.window
+  )
+
+  if (!success) {
+    return new Response(
+      JSON.stringify({ error: "Too many checkout attempts" }),
+      { 
+        status: 429,
+        headers: { "Retry-After": RATE_LIMITS.checkout.window.toString() }
+      }
+    )
+  }
+
+  const result = await createRouteHandlerClient(request)
+  if (result instanceof Response) return result
+
+  const { supabase, session } = result
+
   try {
     // Must call cookies() before any Supabase calls
     cookies()
-    const supabase = createServer()
 
     // Parse and validate request data
     let data: CreateCheckoutSessionData

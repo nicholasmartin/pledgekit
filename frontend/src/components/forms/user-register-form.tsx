@@ -19,8 +19,6 @@ import {
 import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/use-toast"
 import { Loader2 } from "lucide-react"
-import { registerUser } from "@/lib/auth"
-import { UserType } from "@/lib/types/user"
 
 const formSchema = z.object({
   firstName: z.string().min(2, {
@@ -51,32 +49,33 @@ export function UserRegisterForm() {
   })
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsLoading(true)
     try {
-      // Register user with public user type
-      await registerUser({
-        email: values.email,
-        password: values.password,
-        firstName: values.firstName,
-        lastName: values.lastName,
-        userType: UserType.PUBLIC_USER,
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(values),
       })
 
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Registration failed')
+      }
+
       toast({
-        title: "Registration successful!",
-        description: "Please check your email to verify your account before logging in.",
+        title: "Registration successful",
+        description: "Please check your email to verify your account.",
       })
       
-      router.push("/login")
+      router.push('/auth/verify')
     } catch (error) {
       console.error('Registration error:', error)
       toast({
-        title: "Error",
-        description: "Something went wrong. Please try again.",
+        title: "Registration failed",
+        description: error instanceof Error ? error.message : "Something went wrong",
         variant: "destructive",
       })
-    } finally {
-      setIsLoading(false)
     }
   }
 

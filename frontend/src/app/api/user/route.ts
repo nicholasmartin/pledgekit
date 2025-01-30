@@ -1,40 +1,108 @@
-import { cookies } from 'next/headers'
-import { NextResponse } from 'next/server'
-import { getUserDetails } from '@/lib/supabase/server'
-import { createServer } from '@/lib/supabase/server'
+import { createRouteHandlerClient, getClientIp, rateLimit } from "@/lib/supabase/server/route-handlers"
+import { NextResponse } from "next/server"
 
-export const dynamic = 'force-dynamic'
+/**
+ * Rate limit configuration for user operations
+ */
+const RATE_LIMITS = {
+  get: { limit: 30, window: 60 }, // 30 requests per minute
+  update: { limit: 10, window: 60 }, // 10 updates per minute
+}
 
-export async function GET() {
+/**
+ * GET /api/user
+ * Fetches the current user's details
+ */
+export async function GET(request: Request) {
+  // Apply rate limiting
+  const ip = getClientIp(request)
+  const { success, remaining } = await rateLimit(
+    ip,
+    "user-get",
+    RATE_LIMITS.get.limit,
+    RATE_LIMITS.get.window
+  )
+
+  if (!success) {
+    return new Response(
+      JSON.stringify({ error: "Too many requests" }),
+      { 
+        status: 429,
+        headers: { "Retry-After": RATE_LIMITS.get.window.toString() }
+      }
+    )
+  }
+
+  const result = await createRouteHandlerClient(request)
+  if (result instanceof Response) return result
+
+  const { supabase, session } = result
+
   try {
-    // Must call cookies() before any Supabase calls
-    cookies()
-    const supabase = createServer()
+    const { data, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", session.user.id)
+      .single()
 
-    // First verify the user session is valid
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      console.error('Error verifying user session:', authError)
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    if (error) throw error
 
-    // Get detailed user info including company membership
-    const userDetails = await getUserDetails()
-    if (!userDetails) {
-      return NextResponse.json(
-        { error: 'Failed to fetch user details' },
-        { status: 404 }
-      )
-    }
-
-    return NextResponse.json(userDetails)
+    return NextResponse.json(data)
   } catch (error) {
-    console.error('Error in user API route:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
+    console.error("Error fetching user:", error)
+    return new Response(
+      JSON.stringify({ error: "Failed to fetch user data" }),
+      { status: 500 }
+    )
+  }
+}
+
+/**
+ * PATCH /api/user
+ * Updates the current user's details
+ */
+export async function PATCH(request: Request) {
+  // Apply rate limiting
+  const ip = getClientIp(request)
+  const { success } = await rateLimit(
+    ip,
+    "user-update",
+    RATE_LIMITS.update.limit,
+    RATE_LIMITS.update.window
+  )
+
+  if (!success) {
+    return new Response(
+      JSON.stringify({ error: "Too many update requests" }),
+      { 
+        status: 429,
+        headers: { "Retry-After": RATE_LIMITS.update.window.toString() }
+      }
+    )
+  }
+
+  const result = await createRouteHandlerClient(request)
+  if (result instanceof Response) return result
+
+  const { supabase, session } = result
+
+  try {
+    const body = await request.json()
+
+    const { data, error } = await supabase
+      .from("users")
+      .update(body)
+      .eq("id", session.user.id)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    return NextResponse.json(data)
+  } catch (error) {
+    console.error("Error updating user:", error)
+    return new Response(
+      JSON.stringify({ error: "Failed to update user data" }),
       { status: 500 }
     )
   }

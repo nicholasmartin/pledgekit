@@ -20,6 +20,7 @@ export const UserTypeValues = {
 /**
  * Extended user details including company membership information.
  * Used for server-side user information retrieval.
+ * Company is returned as a single object due to database constraints ensuring only one company per user.
  */
 export type UserDetails = {
   user: {
@@ -31,9 +32,7 @@ export type UserDetails = {
   }
   membership?: {
     role: string
-    company: {
-      name: string
-    } | null
+    company: { name: string }
   } | null
 }
 
