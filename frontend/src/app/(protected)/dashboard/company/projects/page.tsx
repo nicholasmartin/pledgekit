@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { PlusIcon } from "lucide-react"
 import { getUser } from "@/lib/supabase/server/auth"
+import { revalidatePath } from "next/cache"
+
+export const revalidate = 0 // Disable static page generation
 
 export default async function ProjectsPage() {
   const supabase = createServer()

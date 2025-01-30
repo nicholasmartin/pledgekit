@@ -57,15 +57,20 @@ export function ProjectsClient({ projects, limit }: ProjectsClientProps) {
       setIsDeleting(true)
       setError(null)
 
-      const { error } = await supabase
+      console.log("Attempting to delete project:", deleteProjectId)
+      
+      const { error: deleteError } = await supabase
         .from("projects")
         .delete()
         .eq("id", deleteProjectId)
 
-      if (error) {
-        throw error
+      if (deleteError) {
+        console.error("Error deleting project:", deleteError)
+        throw deleteError
       }
 
+      console.log("Project deletion successful")
+      
       setDeleteProjectId(null)
       router.refresh()
     } catch (err) {
@@ -93,8 +98,13 @@ export function ProjectsClient({ projects, limit }: ProjectsClientProps) {
   return (
     <div className="space-y-4">
       {error && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="mb-4">
           <AlertDescription>{error.message}</AlertDescription>
+        </Alert>
+      )}
+      {isDeleting && (
+        <Alert variant="default" className="mb-4">
+          <AlertDescription>Deleting project...</AlertDescription>
         </Alert>
       )}
 

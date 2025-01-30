@@ -15,6 +15,7 @@ export interface NavItem {
   href: string
   icon: LucideIcon
   description?: string
+  disabled?: boolean
 }
 
 export interface NavigationConfig {
@@ -41,12 +42,14 @@ export const companyNavigation: NavigationConfig = {
       href: "#",
       icon: LineChart,
       description: "View detailed analytics and insights",
+      disabled: true
     },
     {
       title: "Users",
       href: "#",
       icon: Users,
       description: "Manage user access and roles",
+      disabled: true
     },
     {
       title: "Feature Requests",
