@@ -6,20 +6,9 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { DollarSign, Users, LineChart, Rocket } from "lucide-react"
-import { cookies } from "next/headers"
-import { redirect } from "next/navigation"
 import { EmailVerifiedToast } from "@/components/dashboard/email-verified-toast"
-import { getUser } from "@/lib/supabase/server/auth"
 
-export default async function DashboardPage() {
-  // Call cookies() before any Supabase calls
-  cookies()
-  
-  const user = await getUser()
-  if (!user) {
-    redirect('/login')
-  }
-
+export default function DashboardPage() {
   return (
     <div>
       <EmailVerifiedToast />

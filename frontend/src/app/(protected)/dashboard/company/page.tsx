@@ -1,6 +1,6 @@
 import { getUser } from '@/lib/supabase/server'
 import { createServer } from '@/lib/supabase/server'
-import { CompanyDashboard } from './components/company-dashboard'
+import { CompanyDashboard } from '@/components/companies/company-dashboard'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { toProjectWithPledges } from '@/types/transformers/project'

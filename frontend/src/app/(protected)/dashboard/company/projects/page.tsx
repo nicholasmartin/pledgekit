@@ -4,19 +4,13 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { PlusIcon } from "lucide-react"
 import { getUser } from "@/lib/supabase/server/auth"
-import { redirect } from "next/navigation"
-import { cookies } from "next/headers"
 
 export default async function ProjectsPage() {
-  // Call cookies() before any Supabase calls
-  cookies()
-  
-  const user = await getUser()
-  if (!user) {
-    redirect('/login')
-  }
-  
   const supabase = createServer()
+  const user = await getUser(supabase)
+  
+  // We know user exists because we're in a protected route
+  if (!user) throw new Error("User not found in protected route")
   
   // Get the company_id for the current user from company_members table
   const { data: companyMember, error: memberError } = await supabase

@@ -1,57 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { createClient } from "@/lib/supabase/client"
-import type { User } from "@supabase/supabase-js"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
+import { useAuth } from "@/components/providers/auth-provider"
+import { useState } from "react"
 
 export default function ProfilePage() {
-  const [user, setUser] = useState<User | null>(null)
+  const { user } = useAuth()
   const [error, setError] = useState<Error | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const supabase = createClient()
-
-  useEffect(() => {
-    async function getProfile() {
-      try {
-        setIsLoading(true)
-        const { data: { user }, error } = await supabase.auth.getUser()
-        
-        if (error) {
-          throw error
-        }
-
-        setUser(user)
-        setError(null)
-      } catch (err) {
-        console.error("Error fetching user profile:", err)
-        setError(err instanceof Error ? err : new Error("Failed to load user profile"))
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    getProfile()
-  }, [supabase])
-
-  if (isLoading) {
-    return (
-      <div className="container py-8">
-        <Skeleton className="h-8 w-48 mb-6" />
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-32" />
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-full" />
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
 
   return (
     <div className="container py-8">

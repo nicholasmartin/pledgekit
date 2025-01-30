@@ -1,14 +1,10 @@
 "use client"
 
-import { Metadata } from "next"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { signInWithPassword, getUserType } from "@/lib/supabase/client/auth"
-import { UserType } from "@/types/external/supabase/auth"
-
 import { Button } from "@/components/ui/button"
 import {
   Form,
@@ -42,13 +38,30 @@ export default function LoginPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      const data = await signInWithPassword(values.email, values.password)
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(values),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        // Handle rate limiting
+        if (response.status === 429) {
+          const resetDate = new Date(data.reset)
+          throw new Error(`Too many login attempts. Please try again after ${resetDate.toLocaleTimeString()}.`)
+        }
+        throw new Error(data.error || 'Login failed')
+      }
 
       // Get user type from metadata
-      const userType = await getUserType()
-      
+      const userType = data.user?.user_metadata?.user_type
+
       // Redirect based on user type
-      if (userType === UserType.COMPANY) {
+      if (userType === 'company') {
         router.push('/dashboard/company')
       } else {
         router.push('/dashboard/user')
@@ -60,13 +73,13 @@ export default function LoginPage() {
       })
     } catch (error) {
       console.error('Login error:', error)
+      
       toast({
         title: "Login Error",
-        description: "An unexpected error occurred during login.",
+        description: error instanceof Error ? error.message : 'An unexpected error occurred',
         variant: "destructive",
       })
     } finally {
-      // Ensure loading state is reset
       form.reset()
     }
   }

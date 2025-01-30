@@ -8,7 +8,7 @@
 import { Tables } from '../helpers/database'
 import { PublicProject, publicProjectSchema } from '../domain/project/public'
 import { DashboardProject, dashboardProjectSchema } from '../domain/project/dashboard'
-import { ProjectWithCompany } from '../domain/project/types'
+import { ProjectWithCompany, ProjectWithPledges } from '../domain/project/types'
 
 export function toPublicProject(
   dbProject: Tables<'projects'> & {
@@ -120,34 +120,23 @@ export function toProjectWithPledges(
   dbProject: Tables<'projects'> & {
     pledge_options: Tables<'pledge_options'>[]
   }
-): {
-  id: string
-  title: string
-  description: string | null
-  goal: number
-  amount_pledged: number | null
-  end_date: string
-  header_image_url: string | null
-  company_id: string
-  status: "draft" | "published" | "completed" | "cancelled"
-  visibility: "public" | "private"
-  created_at: string | null
-  updated_at: string | null
-  pledge_options: ReturnType<typeof toPledgeOption>[]
-} {
+): ProjectWithPledges {
   return {
     id: dbProject.id,
     title: dbProject.title,
     description: dbProject.description,
     goal: dbProject.goal,
-    amount_pledged: dbProject.amount_pledged,
-    end_date: new Date(dbProject.end_date).toISOString(),
-    header_image_url: dbProject.header_image_url,
-    company_id: dbProject.company_id,
+    amountPledged: dbProject.amount_pledged || 0,
+    endDate: new Date(dbProject.end_date),
+    headerImageUrl: dbProject.header_image_url || '',
+    companyId: dbProject.company_id,
     status: dbProject.status,
-    visibility: dbProject.visibility as 'public' | 'private',
-    created_at: dbProject.created_at,
-    updated_at: dbProject.updated_at,
-    pledge_options: dbProject.pledge_options.map(toPledgeOption)
+    visibility: dbProject.visibility,
+    pledgeOptions: dbProject.pledge_options.map(po => ({
+      id: po.id,
+      title: po.title,
+      amount: po.amount,
+      benefits: Array.isArray(po.benefits) ? po.benefits.filter((b): b is string => typeof b === 'string') : []
+    }))
   }
 }

@@ -1,8 +1,7 @@
-import { notFound, redirect } from "next/navigation"
+import { notFound } from "next/navigation"
 import { createServer } from "@/lib/supabase/server"
 import { ProjectFormTabs } from "@/components/dashboard/projects/project-form-tabs"
 import { getUser } from "@/lib/supabase/server/auth"
-import { cookies } from "next/headers"
 import type { Database } from "@/types/generated/database"
 
 type ProjectStatus = Database['public']['Enums']['project_status']
@@ -22,15 +21,11 @@ interface EditProjectPageProps {
 }
 
 export default async function EditProjectPage({ params }: EditProjectPageProps) {
-  // Call cookies() before any Supabase calls
-  cookies()
-  
-  const user = await getUser()
-  if (!user) {
-    redirect('/login')
-  }
-
   const supabase = createServer()
+  const user = await getUser(supabase)
+  
+  // We know user exists because we're in a protected route
+  if (!user) throw new Error("User not found in protected route")
   
   // Get the company_id for the current user
   const { data: companyMember, error: memberError } = await supabase

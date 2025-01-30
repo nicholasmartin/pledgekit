@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
-import { useSupabase } from "@/lib/supabase/hooks"
+import { useAuth } from "@/components/providers/auth-provider"
 import {
   Table,
   TableBody,
@@ -29,6 +29,7 @@ import { Separator } from "@/components/ui/separator"
 import useSWR from "swr"
 import { formatDistanceToNow } from "date-fns"
 import { SelectProjectDialog } from "@/components/dashboard/projects/select-project-dialog"
+import { createClient } from "@/lib/supabase/client"
 
 interface CannyPost {
   id: string
@@ -73,6 +74,7 @@ const fetcher = (url: string, options?: RequestInit) =>
   fetch(url, options).then(res => res.json())
 
 export default function FeatureRequestsPage() {
+  const { user } = useAuth()
   const [selectedBoards, setSelectedBoards] = useState<string[]>([])
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
   const [selectedPosts, setSelectedPosts] = useState<string[]>([])
@@ -131,11 +133,8 @@ export default function FeatureRequestsPage() {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
       dedupingInterval: 30000, // 30 seconds
-      // Keep the previous data while revalidating
       keepPreviousData: true,
-      // Revalidate in the background
       revalidateOnMount: true,
-      // Don't revalidate on window focus
       focusThrottleInterval: 0
     }
   )
@@ -182,20 +181,16 @@ export default function FeatureRequestsPage() {
 
   // Filter and sort posts for display
   const filteredAndSortedPosts = useMemo(() => {
-    // Start with all posts
     let result = [...allPosts]
 
-    // Apply board filter
     if (selectedBoards.length > 0) {
       result = result.filter(post => post.board && selectedBoards.includes(post.board.id))
     }
 
-    // Apply status filter
     if (selectedStatuses.length > 0) {
       result = result.filter(post => selectedStatuses.includes(post.status.toLowerCase()))
     }
 
-    // Apply sorting
     result.sort((a, b) => {
       const modifier = sortDirection === "asc" ? 1 : -1
       
@@ -215,7 +210,7 @@ export default function FeatureRequestsPage() {
   }, [allPosts, selectedBoards, selectedStatuses, sortField, sortDirection])
 
   const syncPosts = async () => {
-    if (isSyncing) return // Prevent multiple syncs
+    if (isSyncing) return
     
     setIsSyncing(true)
     try {
@@ -227,11 +222,9 @@ export default function FeatureRequestsPage() {
         throw new Error("Failed to sync posts")
       }
 
-      // Update lastSyncedAt immediately
       const now = new Date().toISOString()
       setLastSyncedAt(now)
 
-      // Mutate both posts and boards data
       await Promise.all([
         mutatePosts(),
         mutateBoards()
@@ -555,11 +548,10 @@ export default function FeatureRequestsPage() {
         open={isProjectDialogOpen}
         onOpenChange={setIsProjectDialogOpen}
         onProjectSelect={async (projectId) => {
+          const supabase = createClient()
           try {
-            console.log('Attempting to update posts:', { projectId, selectedPosts })
-
             // Get the selected project details for optimistic update
-            const { data: projectData } = await useSupabase()
+            const { data: projectData } = await supabase
               .from("projects")
               .select("id, title")
               .eq("id", projectId)
@@ -582,12 +574,10 @@ export default function FeatureRequestsPage() {
             setAllPosts(updatedPosts)
 
             // Make the actual update
-            const { data, error } = await useSupabase()
+            const { error } = await supabase
               .from("canny_posts")
               .update({ project_id: projectId })
               .in("canny_post_id", selectedPosts)
-
-            console.log('Update result:', { data, error })
 
             if (error) throw error
 

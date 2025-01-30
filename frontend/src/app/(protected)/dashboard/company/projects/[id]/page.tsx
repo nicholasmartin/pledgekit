@@ -1,7 +1,5 @@
-import { cookies } from "next/headers"
 import { createServer } from "@/lib/supabase/server"
-import { getUser } from "@/lib/supabase/server/auth"
-import { redirect, notFound } from "next/navigation"
+import { notFound } from "next/navigation"
 import { ProjectPreview } from "@/components/dashboard/projects/project-preview"
 import { toProjectWithCompany, toPledgeOption } from "@/types/transformers/project"
 
@@ -12,14 +10,6 @@ interface PageParams {
 }
 
 export default async function ProjectPage({ params }: PageParams) {
-  // Call cookies() before any Supabase calls
-  cookies()
-  
-  const user = await getUser()
-  if (!user) {
-    redirect('/login')
-  }
-
   const supabase = createServer()
   const { data: project } = await supabase
     .from('projects')

@@ -1,33 +1,30 @@
+import { createServer } from "@/lib/supabase/server"
 import { rateLimit } from "@/lib/rate-limit"
-import { createServer } from "@/lib/supabase/server/server"
-import { cookies } from "next/headers"
-import { NextResponse } from "next/server"
 
 export async function POST(request: Request) {
   try {
-    // Rate limiting
+    // Get IP for rate limiting
     const ip = request.headers.get("x-forwarded-for") ?? "127.0.0.1"
-    const rateLimitResult = await rateLimit(ip, "auth-login", 5, "1h")
     
+    // Rate limit: 5 login attempts per hour
+    const rateLimitResult = await rateLimit(ip, "auth-login", 5, "1h")
     if (!rateLimitResult.success) {
-      return NextResponse.json(
-        { error: "Too many login attempts. Please try again later." },
-        { status: 429 }
+      return new Response(
+        JSON.stringify({ 
+          error: "Too many login attempts. Please try again later.",
+          reset: rateLimitResult.reset
+        }),
+        { 
+          status: 429,
+          headers: { "Content-Type": "application/json" }
+        }
       )
     }
 
-    // Get request body
-    const body = await request.json()
-    const { email, password } = body
+    // Parse request body
+    const { email, password } = await request.json()
 
-    if (!email || !password) {
-      return NextResponse.json(
-        { error: "Email and password are required" },
-        { status: 400 }
-      )
-    }
-
-    // Create Supabase client
+    // Create server client
     const supabase = createServer()
 
     // Attempt login
@@ -37,24 +34,36 @@ export async function POST(request: Request) {
     })
 
     if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: error.status || 500 }
+      return new Response(
+        JSON.stringify({ error: error.message }),
+        { 
+          status: 401,
+          headers: { "Content-Type": "application/json" }
+        }
       )
     }
 
-    // Get user type for redirect
-    const userType = data.user?.user_metadata?.user_type
-
-    return NextResponse.json({
-      user: data.user,
-      userType,
-    })
+    // Return user data and session
+    return new Response(
+      JSON.stringify({ 
+        user: data.user,
+        session: data.session
+      }),
+      { 
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      }
+    )
   } catch (error) {
-    console.error("[Auth API] Login error:", error)
-    return NextResponse.json(
-      { error: "An unexpected error occurred" },
-      { status: 500 }
+    console.error("Login error:", error)
+    return new Response(
+      JSON.stringify({ 
+        error: "An unexpected error occurred" 
+      }),
+      { 
+        status: 500,
+        headers: { "Content-Type": "application/json" }
+      }
     )
   }
 }

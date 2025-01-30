@@ -1,49 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { createClient } from "@/lib/supabase/client"
-import type { User } from "@supabase/supabase-js"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useAuth } from "@/components/providers/auth-provider"
+import { useState } from "react"
 
 export default function SettingsPage() {
-  const [user, setUser] = useState<User | null>(null)
+  const { user } = useAuth()
   const [error, setError] = useState<Error | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const supabase = createClient()
-
-  useEffect(() => {
-    async function getProfile() {
-      try {
-        setIsLoading(true)
-        const { data: { user }, error } = await supabase.auth.getUser()
-        
-        if (error) {
-          throw error
-        }
-
-        setUser(user)
-        setError(null)
-      } catch (err) {
-        console.error("Error fetching user profile:", err)
-        setError(err instanceof Error ? err : new Error("Failed to load user profile"))
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    getProfile()
-  }, [supabase])
-
-  if (isLoading) {
-    return (
-      <div className="container py-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 w-48 bg-muted rounded"></div>
-          <div className="h-32 bg-muted rounded"></div>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="container py-8">

@@ -61,14 +61,7 @@ export const companyNavigation: NavigationConfig = {
       description: "Configure your company settings and integrations",
     },
   ],
-  bottomItems: [
-    {
-      title: "Settings",
-      href: "/dashboard/company/settings",
-      icon: Settings,
-      description: "Manage your company settings",
-    },
-  ],
+  bottomItems: [], // Removed duplicate Settings from bottom navigation
 }
 
 export const userNavigation: NavigationConfig = {

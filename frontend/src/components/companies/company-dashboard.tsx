@@ -1,7 +1,6 @@
 "use client"
 
 import { Card } from '@/components/ui/card'
-import { ProjectsClient } from '@/components/dashboard/projects/projects-client'
 import { DashboardHeader } from '@/components/ui/dashboard-header'
 import { PublicPageCard } from '@/components/dashboard/company/public-page-card'
 import { ProjectWithPledges } from '@/types/domain/project/types'
