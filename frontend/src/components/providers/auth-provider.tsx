@@ -10,7 +10,11 @@ interface AuthContextType {
   userType: UserType | null
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+export const AuthContext = createContext<AuthContextType>({
+  user: null,
+  userDetails: null,
+  userType: null
+})
 
 export function AuthProvider({
   children,
@@ -32,8 +36,12 @@ export function AuthProvider({
 
 export function useAuth() {
   const context = useContext(AuthContext)
-  if (context === undefined) {
+  if (!context) {
     throw new Error("useAuth must be used within an AuthProvider")
   }
   return context
+}
+
+export function useSafeAuth(): AuthContextType {
+  return useContext(AuthContext)
 }

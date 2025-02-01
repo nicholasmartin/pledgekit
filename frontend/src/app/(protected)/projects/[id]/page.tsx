@@ -1,20 +1,23 @@
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import { getCompany, getCompanyProjects } from "@/lib/supabase/server"
 import { toPublicCompany } from "@/types/transformers/company"
 import { toPublicProject } from "@/types/transformers/project"
-import { ProjectPublicView } from "@/components/shared/projects/project-public-view"
+import { ProjectFullDetails } from "@/components/shared/projects/project-full-details"
 
 interface PageProps {
   params: {
-    slug: string
     id: string
   }
 }
 
-export default async function ProjectPage({ params }: PageProps) {
+export default async function ProtectedProjectPage({ params }: PageProps) {
   try {
+    // In a protected route, we can get the user's company context
+    // This would come from your auth/session management
+    const userCompanyId = "TODO: Get from session"
+    
     // Fetch company data
-    const company = await getCompany(params.slug)
+    const company = await getCompany(userCompanyId)
     
     // Fetch projects for this company
     const projects = await getCompanyProjects(company.id)
@@ -22,6 +25,12 @@ export default async function ProjectPage({ params }: PageProps) {
     
     if (!project) {
       notFound()
+    }
+
+    // Check if user has permission to view this project
+    const hasPermission = true // TODO: Implement permission check
+    if (!hasPermission) {
+      redirect('/dashboard')
     }
 
     const publicCompany = toPublicCompany(company)
@@ -34,9 +43,13 @@ export default async function ProjectPage({ params }: PageProps) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container py-8">
-          <ProjectPublicView 
+          <ProjectFullDetails 
             project={publicProject} 
             company={publicCompany}
+            onPledge={() => {
+              // TODO: Implement pledge flow
+              console.log('Pledge clicked')
+            }}
           />
         </div>
       </div>
