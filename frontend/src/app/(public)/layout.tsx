@@ -1,47 +1,68 @@
 /**
  * Public Layout
  * 
- * This layout wraps all public routes that don't require authentication.
- * It provides a consistent structure with navigation and footer while using
- * minimal providers to keep the bundle size small for public pages.
- * 
- * Key features:
- * - Uses BaseProviders instead of full auth providers
- * - Includes MainNav for consistent navigation
- * - Adds Footer component
- * - Maintains proper spacing with min-height
- * 
- * Route group: (public)
- * Applied to: Landing page, login, register, public content
+ * This layout wraps all public routes and provides auth state through
+ * the AuthProvider. This ensures components like MainNav can access
+ * auth state consistently across the app.
  */
 
+import { headers } from 'next/headers'
+import { NextRequest } from 'next/server'
+import { getUser, getUserDetails, getUserType } from '@/lib/supabase/server/auth'
+import { createMiddleware } from '@/lib/supabase/server/middleware'
+import { AuthProvider } from "@/components/providers/auth-provider"
 import { BaseProviders } from "@/components/providers/base-providers"
 import { MainNav } from "@/components/navigation/main-nav"
 import { Footer } from "@/components/navigation/footer"
 
-/**
- * Public layout that provides the base structure for unauthenticated routes.
- * Uses BaseProviders instead of full Providers to avoid unnecessary auth checks.
- */
-export default function PublicLayout({
+export default async function PublicLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  // Get the current request headers to preserve cookies
+  const headersList = headers()
+  const requestHeaders = new Headers()
+  
+  // Add cookie header if available
+  const cookie = headersList.get('cookie')
+  if (cookie) {
+    requestHeaders.set('cookie', cookie)
+  }
+
+  const { supabase, session } = await createMiddleware()(
+    new NextRequest(
+      new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
+      { headers: requestHeaders }
+    )
+  )
+
+  // Get user data if session exists
+  const [user, userDetails, userType] = session ? await Promise.all([
+    getUser(supabase),
+    getUserDetails(supabase),
+    getUserType(supabase)
+  ]) : [null, null, null]
+  
   return (
     <BaseProviders>
-      <div className="relative min-h-screen">
-        {/* MainNav handles its own auth state gracefully */}
-        <MainNav />
-        
-        {/* Main content with padding for footer */}
-        <main className="pb-16">
-          {children}
-        </main>
-        
-        {/* Footer absolutely positioned at bottom */}
-        <Footer className="absolute bottom-0 w-full" />
-      </div>
+      <AuthProvider
+        user={user}
+        userDetails={userDetails}
+        userType={userType}
+      >
+        <div className="relative min-h-screen">
+          <MainNav />
+          
+          {/* Main content with padding for footer */}
+          <main className="pb-16">
+            {children}
+          </main>
+          
+          {/* Footer absolutely positioned at bottom */}
+          <Footer className="absolute bottom-0 w-full" />
+        </div>
+      </AuthProvider>
     </BaseProviders>
   )
 }

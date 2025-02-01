@@ -13,7 +13,7 @@ import { LucideIcon } from "lucide-react"
 export interface NavItem {
   title: string
   href: string
-  icon: LucideIcon
+  icon?: LucideIcon
   description?: string
   disabled?: boolean
 }
@@ -21,6 +21,19 @@ export interface NavItem {
 export interface NavigationConfig {
   mainItems: NavItem[]
   bottomItems: NavItem[]
+}
+
+export const publicNavigation = {
+  mainItems: [
+    {
+      title: "How it Works",
+      href: "/how-it-works",
+    },
+    {
+      title: "Explore",
+      href: "/explore",
+    }
+  ]
 }
 
 export const companyNavigation: NavigationConfig = {

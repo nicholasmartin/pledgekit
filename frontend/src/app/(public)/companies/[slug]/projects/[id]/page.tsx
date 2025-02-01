@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation"
 import { getCompany, getCompanyProjects } from "@/lib/supabase/server"
+import { ProjectDetails } from "@/components/projects/project-details"
 import { toPublicCompany } from "@/types/transformers/company"
 import { toPublicProject } from "@/types/transformers/project"
-import { ProjectPublicView } from "@/components/shared/projects/project-public-view"
 
 interface PageProps {
   params: {
@@ -34,8 +34,8 @@ export default async function ProjectPage({ params }: PageProps) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container py-8">
-          <ProjectPublicView 
-            project={publicProject} 
+          <ProjectDetails
+            project={publicProject}
             company={publicCompany}
           />
         </div>
