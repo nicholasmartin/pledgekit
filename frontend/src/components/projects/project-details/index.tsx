@@ -8,6 +8,7 @@ import { ProjectMetrics } from "./metrics"
 import { PledgeButton } from "./pledge-button"
 import { useAuth } from "@/components/providers/auth-provider"
 import Link from "next/link"
+import { Progress } from "@/components/ui/progress"
 
 interface ProjectDetailsProps {
   project: PublicProject
@@ -20,6 +21,7 @@ export function ProjectDetails({
 }: ProjectDetailsProps) {
   const { user } = useAuth()
   const isAuthenticated = !!user
+  const progress = Math.round((project.amount_pledged / project.goal) * 100)
 
   if (!project) {
     return (
@@ -30,15 +32,9 @@ export function ProjectDetails({
   }
 
   return (
-    <div className="space-y-8">
-      {/* Base project info - always shown */}
-      <div className="space-y-4">
-        <h1 className="text-4xl font-bold tracking-tight">{project.title}</h1>
-        <p className="text-lg text-muted-foreground whitespace-pre-wrap">
-          {project.description}
-        </p>
-        <ProjectMetrics project={project} />
-
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* Left Column - Main Content */}
+      <div className="lg:col-span-2 space-y-6">
         {project.header_image_url && (
           <img
             src={project.header_image_url}
@@ -46,49 +42,72 @@ export function ProjectDetails({
             className="w-full rounded-lg object-cover aspect-video"
           />
         )}
+        <h1 className="text-4xl font-bold tracking-tight">{project.title}</h1>
+        <p className="text-lg text-muted-foreground whitespace-pre-wrap">
+          {project.description}
+        </p>
       </div>
 
-      {isAuthenticated ? (
-        // Authenticated view - Full details + pledge
-        <div className="space-y-6">
-          <div className="bg-muted rounded-lg p-6">
-            <h2 className="text-2xl font-semibold mb-4">Detailed Information</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Amount Pledged</p>
-                <p className="text-2xl font-bold">
-                  ${project.amount_pledged.toLocaleString()}
-                </p>
+      {/* Right Column - Project Details */}
+      <div className="space-y-6">
+        <div className="bg-muted rounded-lg p-6">
+          <div className="space-y-6">
+            {/* Status */}
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground">Status</h3>
+              <p className="text-lg font-semibold">{project.status}</p>
+            </div>
+
+            {/* Goal */}
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground">Goal</h3>
+              <p className="text-2xl font-bold">${project.goal.toLocaleString()}</p>
+            </div>
+
+            {/* Amount Pledged */}
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground">Amount Pledged</h3>
+              <p className="text-2xl font-bold">${project.amount_pledged.toLocaleString()}</p>
+            </div>
+
+            {/* Progress */}
+            <div>
+              <div className="flex justify-between mb-2">
+                <h3 className="text-sm font-medium text-muted-foreground">Progress</h3>
+                <span className="text-sm font-medium">{progress}%</span>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Progress</p>
-                <p className="text-2xl font-bold">
-                  {Math.round((project.amount_pledged / project.goal) * 100)}%
-                </p>
-              </div>
+              <Progress value={progress} className="h-2" />
+            </div>
+
+            {/* Time Remaining */}
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground">Time Remaining</h3>
+              <p className="text-lg font-semibold">30 days</p>
             </div>
           </div>
+        </div>
+
+        {isAuthenticated ? (
           <PledgeButton project={project} />
-        </div>
-      ) : (
-        // Public view - Login CTA
-        <div className="bg-muted rounded-lg p-6 text-center">
-          <h2 className="text-xl font-semibold mb-2">
-            Want to support this project?
-          </h2>
-          <p className="text-muted-foreground mb-4">
-            Log in to see full project details and make pledges.
-          </p>
-          <div className="flex justify-center gap-4">
-            <Button variant="outline" asChild>
-              <Link href="/login">Sign In</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/register">Get Started</Link>
-            </Button>
+        ) : (
+          <div className="bg-muted rounded-lg p-6 text-center">
+            <h2 className="text-xl font-semibold mb-2">
+              Want to support this project?
+            </h2>
+            <p className="text-muted-foreground mb-4">
+              Log in to see full project details and make pledges.
+            </p>
+            <div className="flex justify-center gap-4">
+              <Button variant="outline" asChild>
+                <Link href="/login">Sign In</Link>
+              </Button>
+              <Button asChild>
+                <Link href="/register">Get Started</Link>
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }
