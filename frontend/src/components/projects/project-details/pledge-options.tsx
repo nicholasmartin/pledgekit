@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
@@ -23,26 +24,39 @@ export function PledgeOptions({
   disabled
 }: PledgeOptionsProps) {
   const { toast } = useToast()
+  const router = useRouter()
   const [isLoading, setIsLoading] = useState<string | null>(null)
   const isExpired = new Date(project.end_date) < new Date()
 
   useEffect(() => {
     // Check redirect status
     const query = new URLSearchParams(window.location.search)
-    if (query.get('success')) {
+    const success = query.get('success')
+    const canceled = query.get('canceled')
+
+    // Show appropriate toast based on status
+    if (success) {
       toast({
         title: "Payment successful!",
         description: "Thank you for your pledge.",
       })
+      // Remove success parameter from URL
+      const newUrl = new URL(window.location.href)
+      newUrl.searchParams.delete('success')
+      router.replace(newUrl.pathname)
     }
-    if (query.get('canceled')) {
+    if (canceled) {
       toast({
         title: "Payment canceled",
         description: "Your pledge was not completed. Please try again.",
         variant: "destructive",
       })
+      // Remove canceled parameter from URL
+      const newUrl = new URL(window.location.href)
+      newUrl.searchParams.delete('canceled')
+      router.replace(newUrl.pathname)
     }
-  }, [toast])
+  }, [toast, router])
 
   const handlePledge = async (pledgeOptionId: string) => {
     try {
