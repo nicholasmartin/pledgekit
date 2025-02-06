@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import { getCompany, getCompanyProjects } from "@/lib/supabase/server"
+import { getPledgeOptions } from "@/lib/supabase/server/pledge"
 import { ProjectDetails } from "@/components/projects/project-details"
 import { toPublicCompany } from "@/types/transformers/company"
 import { toPublicProject } from "@/types/transformers/project"
@@ -25,6 +26,9 @@ export default async function ProjectPage({ params }: PageProps) {
       notFound()
     }
 
+    // Fetch pledge options
+    const pledgeOptions = await getPledgeOptions(project.id)
+
     const publicCompany = toPublicCompany(company)
     const publicProject = toPublicProject({ ...project, companies: company })
     
@@ -44,6 +48,7 @@ export default async function ProjectPage({ params }: PageProps) {
           <ProjectDetails
             project={publicProject}
             company={publicCompany}
+            pledgeOptions={pledgeOptions}
           />
         </div>
       </div>

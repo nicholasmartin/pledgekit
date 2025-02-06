@@ -5,19 +5,24 @@ import { Button } from "@/components/ui/button"
 import { PublicProject } from "@/types/domain/project/public"
 import { PublicCompany } from "@/types/domain/company/public"
 import { ProjectMetrics } from "./metrics"
-import { PledgeButton } from "./pledge-button"
+import { PledgeOptions } from "./pledge-options"
 import { useAuth } from "@/components/providers/auth-provider"
 import Link from "next/link"
 import { Progress } from "@/components/ui/progress"
+import type { Database } from "@/types/generated/database"
+
+type PledgeOption = Database['public']['Tables']['pledge_options']['Row']
 
 interface ProjectDetailsProps {
   project: PublicProject
   company: PublicCompany
+  pledgeOptions: PledgeOption[]
 }
 
 export function ProjectDetails({
   project,
   company,
+  pledgeOptions,
 }: ProjectDetailsProps) {
   const { user } = useAuth()
   const isAuthenticated = !!user
@@ -88,7 +93,12 @@ export function ProjectDetails({
         </div>
 
         {isAuthenticated ? (
-          <PledgeButton project={project} />
+          <PledgeOptions 
+            options={pledgeOptions} 
+            projectId={project.id}
+            project={project}
+            disabled={project.status !== 'published'}
+          />
         ) : (
           <div className="bg-muted rounded-lg p-6 text-center">
             <h2 className="text-xl font-semibold mb-2">

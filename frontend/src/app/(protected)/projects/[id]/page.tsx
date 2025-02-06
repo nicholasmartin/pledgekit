@@ -1,8 +1,9 @@
-import { notFound, redirect } from "next/navigation"
-import { getCompany, getCompanyProjects } from "@/lib/supabase/server"
+import { notFound } from "next/navigation"
+import { getProject } from "@/lib/supabase/server/project"
+import { getPledgeOptions } from "@/lib/supabase/server/pledge"
 import { ProjectDetails } from "@/components/projects/project-details"
-import { toPublicCompany } from "@/types/transformers/company"
 import { toPublicProject } from "@/types/transformers/project"
+import { toPublicCompany } from "@/types/transformers/company"
 
 interface PageProps {
   params: {
@@ -10,40 +11,31 @@ interface PageProps {
   }
 }
 
-export default async function ProtectedProjectPage({ params }: PageProps) {
+export default async function ProjectPage({ params }: PageProps) {
   try {
-    // Get user's company context from layout
-    const userCompanyId = params.id // TODO: Get from layout context
-    if (!userCompanyId) {
-      redirect('/dashboard')
-    }
-
-    // Fetch company data
-    const company = await getCompany(userCompanyId)
-    
-    // Fetch projects for this company
-    const projects = await getCompanyProjects(company.id)
-    const project = projects.find(p => p.id === params.id)
-    
+    // Fetch project data
+    const project = await getProject(params.id)
     if (!project) {
       notFound()
     }
 
-    const publicCompany = toPublicCompany(company)
-    const publicProject = toPublicProject({ ...project, companies: company })
-    
-    if (!publicProject) {
+    // Fetch pledge options
+    const pledgeOptions = await getPledgeOptions(project.id)
+
+    const publicProject = toPublicProject(project)
+    const publicCompany = toPublicCompany(project.companies)
+
+    if (!publicProject || !publicCompany) {
       notFound()
     }
 
     return (
-      <div className="min-h-screen bg-background">
-        <div className="container py-8">
-          <ProjectDetails
-            project={publicProject}
-            company={publicCompany}
-          />
-        </div>
+      <div className="container mx-auto max-w-[1200px] px-4 py-8">
+        <ProjectDetails
+          project={publicProject}
+          company={publicCompany}
+          pledgeOptions={pledgeOptions}
+        />
       </div>
     )
   } catch (error) {
