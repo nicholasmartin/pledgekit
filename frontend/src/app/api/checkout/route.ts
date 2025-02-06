@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { stripe } from '@/lib/stripe'
+import { createPledge } from '@/lib/supabase/server/pledge'
 import type { Database } from '@/types/generated/database'
 
 export async function POST(request: Request) {
@@ -69,6 +70,13 @@ export async function POST(request: Request) {
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
+      payment_intent_data: {
+        metadata: {
+          projectId,
+          pledgeOptionId,
+          userId: user.id,
+        },
+      },
       line_items: [
         {
           price_data: {
@@ -85,11 +93,15 @@ export async function POST(request: Request) {
       mode: 'payment',
       success_url: `${origin}${projectPath}?success=true`,
       cancel_url: `${origin}${projectPath}?canceled=true`,
-      metadata: {
-        projectId,
-        pledgeOptionId,
-        userId: user.id,
-      },
+    })
+
+    // Create initial pledge record
+    await createPledge({
+      userId: user.id,
+      projectId,
+      pledgeOptionId,
+      amount: pledgeOption.amount,
+      paymentIntentId: session.payment_intent as string,
     })
 
     // Return redirect URL

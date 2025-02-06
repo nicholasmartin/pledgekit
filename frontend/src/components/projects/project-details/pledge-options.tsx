@@ -74,7 +74,6 @@ export function PledgeOptions({
         description: error.message,
         variant: "destructive",
       })
-    } finally {
       setIsLoading(null)
     }
   }
@@ -122,7 +121,7 @@ export function PledgeOptions({
                 disabled={disabled || isExpired || isLoading === option.id}
               >
                 {isExpired ? 'Project Ended' : 
-                 isLoading === option.id ? 'Loading...' : 
+                 isLoading === option.id ? 'Processing...' : 
                  `Pledge $${option.amount}`}
               </Button>
             </div>
