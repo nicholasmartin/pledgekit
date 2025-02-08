@@ -1,6 +1,5 @@
 "use client"
 
-import { DashboardShell } from '@/components/dashboard/shell'
 import { useAuth } from '@/components/providers/auth-provider'
 import { UserType } from '@/types/external/supabase/auth'
 import { redirect } from 'next/navigation'
@@ -17,9 +16,5 @@ export default function UserDashboardLayout({
     redirect('/dashboard')
   }
 
-  return (
-    <DashboardShell userType={UserType.USER}>
-      {children}
-    </DashboardShell>
-  )
+  return children
 }

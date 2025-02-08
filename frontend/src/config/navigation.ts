@@ -101,12 +101,5 @@ export const userNavigation: NavigationConfig = {
       description: "View your saved projects",
     },
   ],
-  bottomItems: [
-    {
-      title: "Profile",
-      href: "/dashboard/user/profile",
-      icon: UserCircle,
-      description: "Manage your profile settings",
-    },
-  ],
+  bottomItems: [],
 }
