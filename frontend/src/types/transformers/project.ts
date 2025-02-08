@@ -96,26 +96,6 @@ export function toDbProject(
   }
 }
 
-export function toPledgeOption(dbPledgeOption: Tables<'pledge_options'>): {
-  amount: number
-  benefits: string[]
-  created_at: string | null
-  description: string | null
-  id: string
-  project_id: string | null
-  title: string
-} {
-  return {
-    id: dbPledgeOption.id,
-    title: dbPledgeOption.title,
-    description: dbPledgeOption.description,
-    amount: dbPledgeOption.amount,
-    benefits: Array.isArray(dbPledgeOption.benefits) ? dbPledgeOption.benefits.filter((b): b is string => typeof b === 'string') : [],
-    project_id: dbPledgeOption.project_id,
-    created_at: dbPledgeOption.created_at
-  }
-}
-
 export function toProjectWithPledges(
   dbProject: Tables<'projects'> & {
     pledge_options: Tables<'pledge_options'>[]
