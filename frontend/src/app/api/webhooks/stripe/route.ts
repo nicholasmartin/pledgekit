@@ -21,18 +21,29 @@ export async function POST(request: Request) {
   }
 
   try {
+    console.log(`Processing webhook event: ${event.type}`, {
+      id: event.id,
+      type: event.type,
+      created: new Date(event.created * 1000).toISOString()
+    })
+
     switch (event.type) {
       case 'payment_intent.created': {
-        // Log the creation of payment intent
         const paymentIntent = event.data.object as Stripe.PaymentIntent
-        console.log('Payment intent created:', paymentIntent.id)
+        console.log('Payment intent created:', {
+          id: paymentIntent.id,
+          metadata: paymentIntent.metadata
+        })
         break
       }
 
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session
-        // Log completion but don't update status yet
-        console.log('Checkout session completed:', session.id)
+        console.log('Checkout session completed:', {
+          id: session.id,
+          paymentIntent: session.payment_intent,
+          metadata: session.metadata
+        })
         break
       }
 
@@ -40,15 +51,31 @@ export async function POST(request: Request) {
         const paymentIntent = event.data.object as Stripe.PaymentIntent
         const { pledgeId } = paymentIntent.metadata
         
+        console.log('Payment intent succeeded:', {
+          id: paymentIntent.id,
+          metadata: paymentIntent.metadata,
+          pledgeId
+        })
+
         if (pledgeId) {
-          await updatePledgeStatus(
-            pledgeId,
-            'completed',
-            paymentIntent.id,
-            paymentIntent.payment_method as string
-          )
+          try {
+            const updatedPledge = await updatePledgeStatus(
+              pledgeId,
+              'completed',
+              paymentIntent.id,
+              paymentIntent.payment_method as string
+            )
+            console.log('Successfully updated pledge:', updatedPledge)
+          } catch (error: any) {
+            console.error('Failed to update pledge:', {
+              error: error.message,
+              pledgeId,
+              paymentIntentId: paymentIntent.id
+            })
+            throw error // Re-throw to be caught by outer try-catch
+          }
         } else {
-          console.error('No pledgeId found in payment intent metadata')
+          console.error('No pledgeId found in payment intent metadata:', paymentIntent)
         }
         break
       }
@@ -57,30 +84,55 @@ export async function POST(request: Request) {
         const paymentIntent = event.data.object as Stripe.PaymentIntent
         const { pledgeId } = paymentIntent.metadata
         
+        console.log('Payment intent failed:', {
+          id: paymentIntent.id,
+          metadata: paymentIntent.metadata,
+          pledgeId
+        })
+
         if (pledgeId) {
-          await updatePledgeStatus(
-            pledgeId,
-            'failed',
-            paymentIntent.id,
-            paymentIntent.payment_method as string
-          )
+          try {
+            const updatedPledge = await updatePledgeStatus(
+              pledgeId,
+              'failed',
+              paymentIntent.id,
+              paymentIntent.payment_method as string
+            )
+            console.log('Successfully updated pledge status to failed:', updatedPledge)
+          } catch (error: any) {
+            console.error('Failed to update pledge status:', {
+              error: error.message,
+              pledgeId,
+              paymentIntentId: paymentIntent.id
+            })
+            throw error
+          }
         }
         break
       }
 
       case 'charge.succeeded':
       case 'charge.updated':
-        // Log these events but no action needed
-        console.log(`${event.type} event received`)
+        console.log(`${event.type} event received:`, {
+          id: event.id,
+          data: event.data.object
+        })
         break
 
       default:
-        console.log(`Unhandled event type ${event.type}`)
+        console.log(`Unhandled event type ${event.type}:`, {
+          id: event.id,
+          data: event.data.object
+        })
     }
 
     return NextResponse.json({ received: true })
   } catch (err: any) {
-    console.error('Error processing webhook:', err)
+    console.error('Error processing webhook:', {
+      error: err.message,
+      eventType: event.type,
+      eventId: event.id
+    })
     return NextResponse.json(
       { 
         error: 'Webhook handler failed',

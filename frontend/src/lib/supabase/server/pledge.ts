@@ -84,6 +84,8 @@ export async function updatePledgeStatus(
   paymentIntentId?: string,
   paymentMethodId?: string
 ) {
+  console.log('Updating pledge status:', { pledgeId, status, paymentIntentId, paymentMethodId })
+  
   const cookieStore = cookies()
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -97,6 +99,23 @@ export async function updatePledgeStatus(
     }
   )
 
+  // First, verify the pledge exists
+  const { data: existingPledge, error: fetchError } = await supabase
+    .from('pledges')
+    .select('*')
+    .eq('id', pledgeId)
+    .single()
+
+  if (fetchError) {
+    console.error('Error fetching pledge:', fetchError)
+    throw new Error(`Failed to find pledge with ID ${pledgeId}: ${fetchError.message}`)
+  }
+
+  if (!existingPledge) {
+    throw new Error(`No pledge found with ID ${pledgeId}`)
+  }
+
+  // Now update the pledge
   const { data, error } = await supabase
     .from('pledges')
     .update({
@@ -107,13 +126,18 @@ export async function updatePledgeStatus(
     })
     .eq('id', pledgeId)
     .select()
-    .single()
 
   if (error) {
+    console.error('Error updating pledge:', error)
     throw new Error(`Failed to update pledge status: ${error.message}`)
   }
 
-  return data
+  if (!data || data.length === 0) {
+    throw new Error('Pledge was not updated')
+  }
+
+  console.log('Successfully updated pledge:', data[0])
+  return data[0]
 }
 
 export async function getUserProjectPledges(userId: string, projectId: string) {
