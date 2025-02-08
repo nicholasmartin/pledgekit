@@ -67,14 +67,23 @@ export async function POST(request: Request) {
 
     const projectPath = `/companies/${company.slug}/projects/${projectId}`
 
+    // Create initial pledge record (without paymentIntentId)
+    const pledge = await createPledge({
+      userId: user.id,
+      projectId,
+      pledgeOptionId,
+      amount: pledgeOption.amount,
+    })
+
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       payment_intent_data: {
         metadata: {
+          pledgeId: pledge.id, // Add pledgeId to metadata
+          userId: user.id,
           projectId,
           pledgeOptionId,
-          userId: user.id,
         },
       },
       line_items: [
@@ -93,15 +102,6 @@ export async function POST(request: Request) {
       mode: 'payment',
       success_url: `${origin}${projectPath}?success=true`,
       cancel_url: `${origin}${projectPath}?canceled=true`,
-    })
-
-    // Create initial pledge record
-    await createPledge({
-      userId: user.id,
-      projectId,
-      pledgeOptionId,
-      amount: pledgeOption.amount,
-      paymentIntentId: session.payment_intent as string,
     })
 
     // Return redirect URL

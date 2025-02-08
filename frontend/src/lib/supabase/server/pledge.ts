@@ -12,21 +12,6 @@ interface CreatePledgeParams {
   status?: Database['public']['Enums']['pledge_status']
 }
 
-interface UserProjectPledge {
-  id: string
-  user_id: string
-  project_id: string
-  pledge_option_id: string
-  amount: number
-  status: Database['public']['Enums']['pledge_status']
-  payment_intent_id: string | null
-  payment_method_id: string | null
-  created_at: string
-  updated_at: string
-  pledge_option_title: string
-  pledge_option_amount: number
-}
-
 export async function getPledgeOptions(projectId: string) {
   const cookieStore = cookies()
   const supabase = createServerClient<Database>(
@@ -59,8 +44,6 @@ export async function createPledge({
   projectId,
   pledgeOptionId,
   amount,
-  paymentIntentId,
-  paymentMethodId,
   status = 'pending'
 }: CreatePledgeParams) {
   const cookieStore = cookies()
@@ -83,8 +66,6 @@ export async function createPledge({
       project_id: projectId,
       pledge_option_id: pledgeOptionId,
       amount,
-      payment_intent_id: paymentIntentId,
-      payment_method_id: paymentMethodId,
       status,
     })
     .select()
@@ -135,40 +116,7 @@ export async function updatePledgeStatus(
   return data
 }
 
-export async function getPledgeByMetadata(
-  userId: string,
-  projectId: string,
-  pledgeOptionId: string
-) {
-  const cookieStore = cookies()
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-      },
-    }
-  )
-
-  const { data, error } = await supabase
-    .from('pledges')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('project_id', projectId)
-    .eq('pledge_option_id', pledgeOptionId)
-    .single()
-
-  if (error && error.code !== 'PGRST116') { // Ignore "no rows returned" error
-    throw new Error(`Failed to get pledge: ${error.message}`)
-  }
-
-  return data
-}
-
-export async function getUserProjectPledges(userId: string, projectId: string): Promise<UserProjectPledge[]> {
+export async function getUserProjectPledges(userId: string, projectId: string) {
   const cookieStore = cookies()
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
