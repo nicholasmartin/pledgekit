@@ -31,6 +31,9 @@ export function PledgeOptions({
   const [isLoading, setIsLoading] = useState<string | null>(null)
   const isExpired = new Date(project.end_date) < new Date()
 
+  // Check if user has pledged to this specific project
+  const hasProjectPledge = userPledges.some(pledge => pledge.project_id === projectId);
+
   useEffect(() => {
     // Check redirect status
     const query = new URLSearchParams(window.location.search)
@@ -111,7 +114,10 @@ export function PledgeOptions({
       <h2 className="text-xl font-semibold">Support this Project</h2>
       <div className="grid gap-4">
         {options.map((option) => {
-          const hasPledged = userPledges.some(pledge => pledge.pledge_option_id === option.id);
+          const hasPledgedThisOption = userPledges.some(pledge => 
+            pledge.project_id === projectId && 
+            pledge.pledge_option_id === option.id
+          );
 
           return (
             <Card key={option.id} className="p-6">
@@ -135,12 +141,22 @@ export function PledgeOptions({
                     </ul>
                   </div>
                 )}
-                {hasPledged && (
+                {hasProjectPledge ? (
+                  hasPledgedThisOption && (
+                    <Button
+                      className="w-full"
+                      disabled={true}
+                    >
+                      Pledged
+                    </Button>
+                  )
+                ) : (
                   <Button
+                    onClick={() => handlePledge(option.id)}
                     className="w-full"
-                    disabled={true}
+                    disabled={disabled || isExpired || isLoading === option.id}
                   >
-                    Pledged
+                    {isLoading === option.id ? 'Processing...' : `Pledge $${option.amount}`}
                   </Button>
                 )}
               </div>
