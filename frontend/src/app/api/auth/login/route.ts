@@ -7,7 +7,7 @@ export async function POST(request: Request) {
     const ip = request.headers.get("x-forwarded-for") ?? "127.0.0.1"
     
     // Rate limit: 5 login attempts per hour
-    const rateLimitResult = await rateLimit(ip, "auth-login", 5, "1h")
+    const rateLimitResult = await rateLimit(ip, "auth-login", 15, "1h")
     if (!rateLimitResult.success) {
       return new Response(
         JSON.stringify({ 
