@@ -27,7 +27,7 @@ export function Navigation({ userType, className }: NavigationProps) {
                 className="w-full justify-start gap-2 opacity-50 cursor-not-allowed"
                 disabled
               >
-                <item.icon className="h-4 w-4" />
+                {item.icon && <item.icon className="h-4 w-4" />}
                 {item.title}
               </Button>
             ) : (
@@ -39,7 +39,7 @@ export function Navigation({ userType, className }: NavigationProps) {
                     pathname === item.href && 'bg-muted'
                   )}
                 >
-                  <item.icon className="h-4 w-4" />
+                  {item.icon && <item.icon className="h-4 w-4" />}
                   {item.title}
                 </Button>
               </Link>
@@ -57,7 +57,7 @@ export function Navigation({ userType, className }: NavigationProps) {
                 className="w-full justify-start gap-2 opacity-50 cursor-not-allowed"
                 disabled
               >
-                <item.icon className="h-4 w-4" />
+                {item.icon && <item.icon className="h-4 w-4" />}
                 {item.title}
               </Button>
             ) : (
@@ -69,7 +69,7 @@ export function Navigation({ userType, className }: NavigationProps) {
                     pathname === item.href && 'bg-muted'
                   )}
                 >
-                  <item.icon className="h-4 w-4" />
+                  {item.icon && <item.icon className="h-4 w-4" />}
                   {item.title}
                 </Button>
               </Link>
