@@ -1,9 +1,60 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { stripe } from '@/lib/stripe'
-import { createPledge } from '@/lib/supabase/server/pledge'
 import type { Database } from '@/types/generated/database'
+
+// Create a Supabase client with the service role key for admin operations
+const adminClient = createClient<Database>(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+)
+
+async function createPledge({
+  userId,
+  projectId,
+  pledgeOptionId,
+  amount,
+}: {
+  userId: string
+  projectId: string
+  pledgeOptionId: string
+  amount: number
+}) {
+  console.log('Creating pledge with params:', {
+    userId,
+    projectId,
+    pledgeOptionId,
+    amount
+  })
+
+  const { data, error } = await adminClient
+    .from('pledges')
+    .insert({
+      user_id: userId,
+      project_id: projectId,
+      pledge_option_id: pledgeOptionId,
+      amount,
+      status: 'pending',
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error creating pledge:', error)
+    throw new Error(`Failed to create pledge: ${error.message}`)
+  }
+
+  console.log('Successfully created pledge:', data)
+  return data
+}
 
 export async function POST(request: Request) {
   try {
@@ -21,6 +72,7 @@ export async function POST(request: Request) {
     )
 
     const { pledgeOptionId, projectId } = await request.json()
+    console.log('Received pledge request:', { pledgeOptionId, projectId })
 
     // Verify user is authenticated
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -39,6 +91,7 @@ export async function POST(request: Request) {
       .single()
 
     if (pledgeError || !pledgeOption || !pledgeOption.projects) {
+      console.error('Failed to get pledge option:', pledgeError)
       return NextResponse.json(
         { error: 'Pledge option not found' },
         { status: 404 }
@@ -53,6 +106,7 @@ export async function POST(request: Request) {
       .single()
 
     if (companyError || !company) {
+      console.error('Failed to get company:', companyError)
       return NextResponse.json(
         { error: 'Company not found' },
         { status: 404 }
@@ -67,14 +121,26 @@ export async function POST(request: Request) {
 
     const projectPath = `/companies/${company.slug}/projects/${projectId}`
 
-    // Create initial pledge record (without paymentIntentId)
-    console.log('Creating initial pledge record:', {
-      userId: user.id,
-      projectId,
-      pledgeOptionId,
-      amount: pledgeOption.amount
-    })
+    // Verify pledge doesn't already exist
+    const { data: existingPledge, error: existingError } = await supabase
+      .from('pledges')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('project_id', projectId)
+      .eq('pledge_option_id', pledgeOptionId)
+      .single()
 
+    if (existingPledge) {
+      console.log('Found existing pledge:', existingPledge)
+      throw new Error('You have already pledged this amount to this project')
+    }
+
+    if (existingError && existingError.code !== 'PGRST116') {
+      console.error('Error checking for existing pledge:', existingError)
+      throw existingError
+    }
+
+    // Create initial pledge record using service role client
     const pledge = await createPledge({
       userId: user.id,
       projectId,

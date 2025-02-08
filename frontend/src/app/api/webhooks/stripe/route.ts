@@ -1,10 +1,76 @@
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
-import { updatePledgeStatus } from '@/lib/supabase/server/pledge'
+import { createClient } from '@supabase/supabase-js'
 import type Stripe from 'stripe'
+import type { Database } from '@/types/generated/database'
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!
+
+// Create a Supabase client with the service role key
+const supabase = createClient<Database>(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!, // Use service role key for webhook
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+)
+
+async function updatePledgeStatus(
+  pledgeId: string,
+  status: Database['public']['Enums']['pledge_status'],
+  paymentIntentId: string,
+  paymentMethodId: string
+) {
+  console.log('Updating pledge status:', {
+    pledgeId,
+    status,
+    paymentIntentId,
+    paymentMethodId
+  })
+
+  // First verify the pledge exists
+  const { data: existingPledge, error: fetchError } = await supabase
+    .from('pledges')
+    .select('*')
+    .eq('id', pledgeId)
+    .single()
+
+  if (fetchError) {
+    console.error('Error fetching pledge:', fetchError)
+    throw new Error(`Failed to find pledge with ID ${pledgeId}: ${fetchError.message}`)
+  }
+
+  if (!existingPledge) {
+    throw new Error(`No pledge found with ID ${pledgeId}`)
+  }
+
+  console.log('Found existing pledge:', existingPledge)
+
+  // Now update the pledge
+  const { data, error } = await supabase
+    .from('pledges')
+    .update({
+      status,
+      payment_intent_id: paymentIntentId,
+      payment_method_id: paymentMethodId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', pledgeId)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error updating pledge:', error)
+    throw new Error(`Failed to update pledge status: ${error.message}`)
+  }
+
+  console.log('Successfully updated pledge:', data)
+  return data
+}
 
 export async function POST(request: Request) {
   const body = await request.text()
