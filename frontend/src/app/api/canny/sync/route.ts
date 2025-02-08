@@ -20,6 +20,11 @@ export async function POST() {
       .select()
       .single()
 
+    // Ensure sync log was created successfully
+    if (!syncLog) {
+      throw new Error("Failed to create sync log")
+    }
+
     // Fetch all boards first
     const boardsResponse = await fetch("https://canny.io/api/v1/boards/list", {
       method: "POST",
