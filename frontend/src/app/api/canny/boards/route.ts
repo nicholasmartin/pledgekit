@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from "next/server"
 import { getCompanyContext, checkRateLimit, errorResponse, setCacheHeaders } from "../utils"
 

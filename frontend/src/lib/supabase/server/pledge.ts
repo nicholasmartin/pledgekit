@@ -12,6 +12,21 @@ interface CreatePledgeParams {
   status?: Database['public']['Enums']['pledge_status']
 }
 
+interface UserProjectPledge {
+  id: string
+  user_id: string
+  project_id: string
+  pledge_option_id: string
+  amount: number
+  status: Database['public']['Enums']['pledge_status']
+  payment_intent_id: string | null
+  payment_method_id: string | null
+  created_at: string
+  updated_at: string
+  pledge_option_title: string
+  pledge_option_amount: number
+}
+
 export async function getPledgeOptions(projectId: string) {
   const cookieStore = cookies()
   const supabase = createServerClient<Database>(
@@ -120,7 +135,11 @@ export async function updatePledgeStatus(
   return data
 }
 
-export async function getPledgeByPaymentIntentId(paymentIntentId: string) {
+export async function getPledgeByMetadata(
+  userId: string,
+  projectId: string,
+  pledgeOptionId: string
+) {
   const cookieStore = cookies()
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -137,12 +156,41 @@ export async function getPledgeByPaymentIntentId(paymentIntentId: string) {
   const { data, error } = await supabase
     .from('pledges')
     .select('*')
-    .eq('payment_intent_id', paymentIntentId)
+    .eq('user_id', userId)
+    .eq('project_id', projectId)
+    .eq('pledge_option_id', pledgeOptionId)
     .single()
 
-  if (error) {
+  if (error && error.code !== 'PGRST116') { // Ignore "no rows returned" error
     throw new Error(`Failed to get pledge: ${error.message}`)
   }
 
   return data
+}
+
+export async function getUserProjectPledges(userId: string, projectId: string): Promise<UserProjectPledge[]> {
+  const cookieStore = cookies()
+  const supabase = createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value
+        },
+      },
+    }
+  )
+
+  const { data, error } = await supabase
+    .rpc('get_user_project_pledges', {
+      p_user_id: userId,
+      p_project_id: projectId
+    })
+
+  if (error) {
+    throw new Error(`Failed to get user project pledges: ${error.message}`)
+  }
+
+  return data || []
 }

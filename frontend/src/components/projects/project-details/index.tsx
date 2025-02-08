@@ -10,6 +10,7 @@ import { useAuth } from "@/components/providers/auth-provider"
 import Link from "next/link"
 import { Progress } from "@/components/ui/progress"
 import type { Database } from "@/types/generated/database"
+import type { UserProjectPledge } from "@/types/domain/pledge"
 
 type PledgeOption = Database['public']['Tables']['pledge_options']['Row']
 
@@ -17,12 +18,14 @@ interface ProjectDetailsProps {
   project: PublicProject
   company: PublicCompany
   pledgeOptions: PledgeOption[]
+  userPledges?: UserProjectPledge[]
 }
 
 export function ProjectDetails({
   project,
   company,
   pledgeOptions,
+  userPledges = [],
 }: ProjectDetailsProps) {
   const { user } = useAuth()
   const isAuthenticated = !!user
@@ -98,6 +101,7 @@ export function ProjectDetails({
             projectId={project.id}
             project={project}
             disabled={project.status !== 'published'}
+            userPledges={userPledges}
           />
         ) : (
           <div className="bg-muted rounded-lg p-6 text-center">

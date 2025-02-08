@@ -1,10 +1,13 @@
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import { getCompany, getCompanyProjects } from "@/lib/supabase/server"
-import { getPledgeOptions } from "@/lib/supabase/server/pledge"
+import { getPledgeOptions, getUserProjectPledges } from "@/lib/supabase/server/pledge"
 import { ProjectDetails } from "@/components/projects/project-details"
 import { toPublicCompany } from "@/types/transformers/company"
 import { toPublicProject } from "@/types/transformers/project"
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+import type { Database } from "@/types/generated/database"
 
 interface PageProps {
   params: {
@@ -15,6 +18,21 @@ interface PageProps {
 
 export default async function ProjectPage({ params }: PageProps) {
   try {
+    // Get current user from Supabase
+    const cookieStore = cookies()
+    const supabase = createServerClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+        },
+      }
+    )
+    const { data: { user } } = await supabase.auth.getUser()
+    
     // Fetch company data
     const company = await getCompany(params.slug)
     
@@ -28,6 +46,9 @@ export default async function ProjectPage({ params }: PageProps) {
 
     // Fetch pledge options
     const pledgeOptions = await getPledgeOptions(project.id)
+
+    // Fetch user's pledges if authenticated
+    const userPledges = user ? await getUserProjectPledges(user.id, project.id) : []
 
     const publicCompany = toPublicCompany(company)
     const publicProject = toPublicProject({ ...project, companies: company })
@@ -49,6 +70,7 @@ export default async function ProjectPage({ params }: PageProps) {
             project={publicProject}
             company={publicCompany}
             pledgeOptions={pledgeOptions}
+            userPledges={userPledges}
           />
         </div>
       </div>

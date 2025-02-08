@@ -521,6 +521,26 @@ export type Database = {
         }
         Returns: string[]
       }
+      get_user_project_pledges: {
+        Args: {
+          p_user_id: string
+          p_project_id: string
+        }
+        Returns: {
+          id: string
+          user_id: string
+          project_id: string
+          pledge_option_id: string
+          amount: number
+          status: Database["public"]["Enums"]["pledge_status"]
+          payment_intent_id: string
+          payment_method_id: string
+          created_at: string
+          updated_at: string
+          pledge_option_title: string
+          pledge_option_amount: number
+        }[]
+      }
       get_user_type: {
         Args: {
           user_id: string
