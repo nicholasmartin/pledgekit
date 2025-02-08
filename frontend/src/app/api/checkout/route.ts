@@ -125,6 +125,7 @@ export async function POST(request: Request) {
       ],
       mode: 'payment',
       success_url: `${origin}${projectPath}?success=true`,
+      customer_email: user.email,
       cancel_url: `${origin}${projectPath}?canceled=true`,
     })
 
