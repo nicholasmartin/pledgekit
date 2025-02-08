@@ -192,12 +192,12 @@ export async function getUserProjectPledges(userId: string, projectId: string) {
     }
   )
 
-  // Get pledges directly
+  // Use the database function that returns pledges with pledge option details
   const { data: pledges, error: pledgeError } = await supabase
-    .from('pledges')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('project_id', projectId)
+    .rpc('get_user_project_pledges', {
+      p_user_id: userId,
+      p_project_id: projectId
+    })
 
   if (pledgeError) {
     console.error('Error getting pledges:', {
