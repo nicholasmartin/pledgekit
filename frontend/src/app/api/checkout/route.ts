@@ -1,60 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
-import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { stripe } from '@/lib/stripe'
+import { createPledge } from '@/lib/supabase/server/pledge'
 import type { Database } from '@/types/generated/database'
-
-// Create a Supabase client with the service role key for admin operations
-const adminClient = createClient<Database>(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-)
-
-async function createPledge({
-  userId,
-  projectId,
-  pledgeOptionId,
-  amount,
-}: {
-  userId: string
-  projectId: string
-  pledgeOptionId: string
-  amount: number
-}) {
-  console.log('Creating pledge with params:', {
-    userId,
-    projectId,
-    pledgeOptionId,
-    amount
-  })
-
-  const { data, error } = await adminClient
-    .from('pledges')
-    .insert({
-      user_id: userId,
-      project_id: projectId,
-      pledge_option_id: pledgeOptionId,
-      amount,
-      status: 'pending',
-    })
-    .select()
-    .single()
-
-  if (error) {
-    console.error('Error creating pledge:', error)
-    throw new Error(`Failed to create pledge: ${error.message}`)
-  }
-
-  console.log('Successfully created pledge:', data)
-  return data
-}
 
 export async function POST(request: Request) {
   try {
@@ -140,7 +89,7 @@ export async function POST(request: Request) {
       throw existingError
     }
 
-    // Create initial pledge record using service role client
+    // Create initial pledge record
     const pledge = await createPledge({
       userId: user.id,
       projectId,

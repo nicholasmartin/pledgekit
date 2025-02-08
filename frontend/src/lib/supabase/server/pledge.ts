@@ -67,21 +67,6 @@ export async function createPledge({
     }
   )
 
-  // First check if we have permission to create pledges
-  const { data: authData, error: authError } = await supabase.auth.getUser()
-  if (authError) {
-    console.error('Auth error when creating pledge:', authError)
-    throw new Error(`Auth error: ${authError.message}`)
-  }
-
-  if (!authData.user) {
-    throw new Error('No authenticated user found')
-  }
-
-  if (authData.user.id !== userId) {
-    throw new Error('User ID mismatch')
-  }
-
   const { data, error } = await supabase
     .from('pledges')
     .insert({
@@ -113,7 +98,7 @@ export async function updatePledgeStatus(
   paymentIntentId?: string,
   paymentMethodId?: string
 ) {
-  console.log('Updating pledge status:', {
+  console.log('Starting pledge status update:', {
     pledgeId,
     status,
     paymentIntentId,
@@ -133,25 +118,38 @@ export async function updatePledgeStatus(
     }
   )
 
-  // First, verify the pledge exists and get its details
+  // First verify the pledge exists
+  console.log('Verifying pledge exists:', pledgeId)
   const { data: existingPledge, error: fetchError } = await supabase
     .from('pledges')
     .select('*')
     .eq('id', pledgeId)
+    .single()
 
   if (fetchError) {
-    console.error('Error fetching pledge:', fetchError)
+    console.error('Error fetching pledge:', {
+      error: fetchError,
+      code: fetchError.code,
+      details: fetchError.details,
+      hint: fetchError.hint
+    })
     throw new Error(`Failed to find pledge with ID ${pledgeId}: ${fetchError.message}`)
   }
 
-  if (!existingPledge || existingPledge.length === 0) {
+  if (!existingPledge) {
     console.error('No pledge found with ID:', pledgeId)
     throw new Error(`No pledge found with ID ${pledgeId}`)
   }
 
-  console.log('Found existing pledge:', existingPledge[0])
+  console.log('Found existing pledge:', existingPledge)
 
   // Now update the pledge
+  console.log('Attempting to update pledge:', {
+    id: pledgeId,
+    currentStatus: existingPledge.status,
+    newStatus: status
+  })
+
   const { data, error } = await supabase
     .from('pledges')
     .update({
@@ -162,18 +160,20 @@ export async function updatePledgeStatus(
     })
     .eq('id', pledgeId)
     .select()
+    .single()
 
   if (error) {
-    console.error('Error updating pledge:', error)
+    console.error('Error updating pledge:', {
+      error,
+      code: error.code,
+      details: error.details,
+      hint: error.hint
+    })
     throw new Error(`Failed to update pledge status: ${error.message}`)
   }
 
-  if (!data || data.length === 0) {
-    throw new Error('Pledge was not updated')
-  }
-
-  console.log('Successfully updated pledge:', data[0])
-  return data[0]
+  console.log('Successfully updated pledge:', data)
+  return data
 }
 
 export async function getUserProjectPledges(userId: string, projectId: string) {
@@ -192,22 +192,7 @@ export async function getUserProjectPledges(userId: string, projectId: string) {
     }
   )
 
-  // First verify the user exists
-  const { data: authData, error: authError } = await supabase.auth.getUser()
-  if (authError) {
-    console.error('Auth error when getting pledges:', authError)
-    throw new Error(`Auth error: ${authError.message}`)
-  }
-
-  if (!authData.user) {
-    throw new Error('No authenticated user found')
-  }
-
-  if (authData.user.id !== userId) {
-    throw new Error('User ID mismatch')
-  }
-
-  // Get pledges directly first to verify RLS
+  // Get pledges directly
   const { data: pledges, error: pledgeError } = await supabase
     .from('pledges')
     .select('*')
@@ -215,23 +200,15 @@ export async function getUserProjectPledges(userId: string, projectId: string) {
     .eq('project_id', projectId)
 
   if (pledgeError) {
-    console.error('Error getting pledges directly:', pledgeError)
-  } else {
-    console.log('Found pledges directly:', pledges)
-  }
-
-  // Now try the RPC
-  const { data, error } = await supabase
-    .rpc('get_user_project_pledges', {
-      p_user_id: userId,
-      p_project_id: projectId
+    console.error('Error getting pledges:', {
+      error: pledgeError,
+      code: pledgeError.code,
+      details: pledgeError.details,
+      hint: pledgeError.hint
     })
-
-  if (error) {
-    console.error('Error getting user project pledges:', error)
-    throw new Error(`Failed to get user project pledges: ${error.message}`)
+    throw new Error(`Failed to get user project pledges: ${pledgeError.message}`)
   }
 
-  console.log('Successfully got user project pledges:', data || [])
-  return data || []
+  console.log('Found pledges:', pledges || [])
+  return pledges || []
 }

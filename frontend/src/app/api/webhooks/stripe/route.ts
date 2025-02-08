@@ -7,10 +7,14 @@ import type { Database } from '@/types/generated/database'
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!
 
-// Create a Supabase client with the service role key
-const supabase = createClient<Database>(
+// Create admin client for webhook operations
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for webhook operations')
+}
+
+const adminClient = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!, // Use service role key for webhook
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
   {
     auth: {
       autoRefreshToken: false,
@@ -33,7 +37,7 @@ async function updatePledgeStatus(
   })
 
   // First verify the pledge exists
-  const { data: existingPledge, error: fetchError } = await supabase
+  const { data: existingPledge, error: fetchError } = await adminClient
     .from('pledges')
     .select('*')
     .eq('id', pledgeId)
@@ -50,8 +54,8 @@ async function updatePledgeStatus(
 
   console.log('Found existing pledge:', existingPledge)
 
-  // Now update the pledge
-  const { data, error } = await supabase
+  // Now update the pledge using admin client
+  const { data, error } = await adminClient
     .from('pledges')
     .update({
       status,
