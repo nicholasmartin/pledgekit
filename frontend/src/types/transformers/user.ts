@@ -40,7 +40,8 @@ export function toDbUser(
     first_name: user.metadata.first_name || null,
     last_name: user.metadata.last_name || null,
     display_name: null,
-    settings: {}
+    settings: {},
+    email: user.email || null
   }
 }
 
