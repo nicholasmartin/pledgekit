@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import { useEffect, useState, useMemo } from "react"
 import { useAuth } from "@/components/providers/auth-provider"
 import {
@@ -30,6 +31,11 @@ import useSWR from "swr"
 import { formatDistanceToNow } from "date-fns"
 import { SelectProjectDialog } from "@/components/dashboard/projects/select-project-dialog"
 import { createClient } from "@/lib/supabase/client"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 
 interface CannyPost {
   id: string
@@ -84,6 +90,7 @@ export default function FeatureRequestsPage() {
   const [allPosts, setAllPosts] = useState<CannyPost[]>([])
   const [isSyncing, setIsSyncing] = useState(false)
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null)
+  const [openStates, setOpenStates] = useState<Record<string, boolean>>({})
   const { toast } = useToast()
 
   // Use SWR for boards
@@ -446,13 +453,14 @@ export default function FeatureRequestsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[50px]">
+                    <TableHead className="w-[40px]">
                       <div
                         role="checkbox"
                         aria-checked={selectedPosts.length === filteredAndSortedPosts.filter(p => !p.project).length}
                         tabIndex={0}
                         className={cn(
-                          "flex h-4 w-4 items-center justify-center rounded border border-primary/20 transition-colors hover:border-primary/30",
+                          "flex h-4 w-4 items-center justify-center rounded border transition-colors",
+                          "border-primary/20 hover:border-primary/30 cursor-pointer",
                           selectedPosts.length === filteredAndSortedPosts.filter(p => !p.project).length
                             ? "bg-primary text-primary-foreground"
                             : selectedPosts.length > 0
@@ -470,66 +478,88 @@ export default function FeatureRequestsPage() {
                         {selectedPosts.length > 0 && <Check className="h-3 w-3" />}
                       </div>
                     </TableHead>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Score</TableHead>
-                    <TableHead className="text-right">Comments</TableHead>
-                    <TableHead>Author</TableHead>
-                    <TableHead>Created</TableHead>
+                    <TableHead className="min-w-[200px]">Title</TableHead>
+                    <TableHead className="w-[120px]">Status</TableHead>
+                    <TableHead className="w-[80px] text-right">Score</TableHead>
+                    <TableHead className="w-[100px] text-right">Comments</TableHead>
+                    <TableHead className="w-[150px]">Author</TableHead>
+                    <TableHead className="w-[120px]">Created</TableHead>
                     <TableHead className="w-[50px]">Project</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredAndSortedPosts.map((post) => (
-                    <TableRow key={post.id}>
-                      <TableCell>
-                        <div
-                          role="checkbox"
-                          aria-checked={selectedPosts.includes(post.canny_post_id)}
-                          aria-disabled={!!post.project}
-                          tabIndex={post.project ? -1 : 0}
-                          className={cn(
-                            "flex h-4 w-4 items-center justify-center rounded border transition-colors",
-                            post.project
-                              ? "border-muted cursor-not-allowed opacity-30"
-                              : "border-primary/20 hover:border-primary/30 cursor-pointer",
-                            selectedPosts.includes(post.canny_post_id)
-                              ? "bg-primary text-primary-foreground"
-                              : "opacity-50"
-                          )}
-                          onClick={() => {
-                            if (post.project) return;
-                            setSelectedPosts((prev) => {
-                              const isSelected = prev.includes(post.canny_post_id)
-                              if (isSelected) {
-                                return prev.filter((id) => id !== post.canny_post_id)
-                              }
-                              return [...prev, post.canny_post_id]
-                            })
-                          }}
-                        >
-                          {selectedPosts.includes(post.canny_post_id) && <Check className="h-3 w-3" />}
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium">{post.title}</TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusColor(post.status)}>{post.status}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">{post.score}</TableCell>
-                      <TableCell className="text-right">{post.commentCount}</TableCell>
-                      <TableCell>{post.author.name}</TableCell>
-                      <TableCell>{new Date(post.created).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        {post.project && (
-                          <div 
-                            className="flex items-center justify-center cursor-help text-muted-foreground hover:text-foreground transition-colors"
-                            title={`Added to project: ${post.project.title}`}
+                    <React.Fragment key={post.id}>
+                      <TableRow 
+                        className="hover:bg-muted/50 transition-colors cursor-pointer" 
+                        onClick={() => setOpenStates(prev => ({ ...prev, [post.id]: !prev[post.id] }))}
+                      >
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <div
+                            role="checkbox"
+                            aria-checked={selectedPosts.includes(post.canny_post_id)}
+                            aria-disabled={!!post.project}
+                            tabIndex={post.project ? -1 : 0}
+                            className={cn(
+                              "flex h-4 w-4 items-center justify-center rounded border transition-colors",
+                              post.project
+                                ? "border-muted cursor-not-allowed opacity-30"
+                                : "border-primary/20 hover:border-primary/30 cursor-pointer",
+                              selectedPosts.includes(post.canny_post_id)
+                                ? "bg-primary text-primary-foreground"
+                                : "opacity-50"
+                            )}
+                            onClick={() => {
+                              if (post.project) return;
+                              setSelectedPosts((prev) => {
+                                const isSelected = prev.includes(post.canny_post_id)
+                                if (isSelected) {
+                                  return prev.filter((id) => id !== post.canny_post_id)
+                                }
+                                return [...prev, post.canny_post_id]
+                              })
+                            }}
                           >
-                            <Folder className="h-4 w-4" />
+                            {selectedPosts.includes(post.canny_post_id) && <Check className="h-3 w-3" />}
                           </div>
-                        )}
-                      </TableCell>
-                    </TableRow>
+                        </TableCell>
+                        <TableCell className="font-medium">{post.title}</TableCell>
+                        <TableCell>
+                          <Badge variant={getStatusColor(post.status)}>{post.status}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right">{post.score}</TableCell>
+                        <TableCell className="text-right">{post.commentCount}</TableCell>
+                        <TableCell>{post.author.name}</TableCell>
+                        <TableCell>{new Date(post.created).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          {post.project && (
+                            <div 
+                              className="flex items-center justify-center cursor-help text-muted-foreground hover:text-foreground transition-colors"
+                              title={`Added to project: ${post.project.title}`}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Folder className="h-4 w-4" />
+                            </div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow className={cn(!openStates[post.id] && "hidden", "border-0")}>
+                        <TableCell colSpan={8} className="p-0 border-0">
+                          <Collapsible 
+                            open={openStates[post.id]} 
+                            onOpenChange={(open) => setOpenStates(prev => ({ ...prev, [post.id]: open }))}
+                          >
+                            <CollapsibleContent>
+                              <div className="p-4 space-y-4 bg-muted/50">
+                                <div className="text-sm text-muted-foreground whitespace-pre-wrap">
+                                  {post.details}
+                                </div>
+                              </div>
+                            </CollapsibleContent>
+                          </Collapsible>
+                        </TableCell>
+                      </TableRow>
+                    </React.Fragment>
                   ))}
                 </TableBody>
               </Table>
