@@ -470,6 +470,7 @@ export type Database = {
         Row: {
           created_at: string | null
           display_name: string | null
+          email: string | null
           first_name: string | null
           id: string
           last_name: string | null
@@ -478,6 +479,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           display_name?: string | null
+          email?: string | null
           first_name?: string | null
           id: string
           last_name?: string | null
@@ -486,6 +488,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           display_name?: string | null
+          email?: string | null
           first_name?: string | null
           id?: string
           last_name?: string | null
@@ -566,6 +569,10 @@ export type Database = {
         Returns: undefined
       }
       set_user_types: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      sync_user_emails: {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }

@@ -57,16 +57,20 @@ export function PublicRegisterForm() {
     try {
       const displayName = `${values.firstName} ${values.lastName}`
 
-      // Register user with public user type and user metadata
+      // First set up the metadata
+      const metadata = {
+        first_name: values.firstName,
+        last_name: values.lastName,
+        display_name: displayName,
+        user_type: UserType.USER // Include user type in initial metadata
+      }
+
+      // Register user with complete metadata
       const { data, error } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
         options: {
-          data: {
-            first_name: values.firstName,
-            last_name: values.lastName,
-            display_name: displayName
-          }
+          data: metadata
         }
       })
 
@@ -76,17 +80,6 @@ export function PublicRegisterForm() {
 
       if (!data.user) {
         throw new Error("Failed to create user account")
-      }
-
-      // Set user type in auth.users metadata
-      const { error: typeError } = await supabase.rpc('set_user_type', {
-        user_id: data.user.id,
-        new_type: UserType.USER
-      })
-
-      if (typeError) {
-        console.error('Failed to set user type:', typeError)
-        throw new Error("Failed to set user type")
       }
 
       toast({
@@ -105,16 +98,17 @@ export function PublicRegisterForm() {
           description: "An account with this email already exists. Please login or use a different email.",
           variant: "destructive"
         })
+      } else if (error instanceof AuthError && error.message.includes('Database error')) {
+        console.error('Database error details:', error)
+        toast({
+          title: "Registration Error",
+          description: "There was a problem creating your account. Please try again.",
+          variant: "destructive"
+        })
       } else if (error instanceof AuthError && error.message === "Failed to create user account") {
         toast({
           title: "Registration Error",
           description: "Failed to create user account. Please try again.",
-          variant: "destructive"
-        })
-      } else if (error instanceof Error && error.message === "Failed to set user type") {
-        toast({
-          title: "Registration Error",
-          description: "Failed to set user type. Please try again.",
           variant: "destructive"
         })
       } else {
