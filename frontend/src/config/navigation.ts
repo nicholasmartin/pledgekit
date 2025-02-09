@@ -51,6 +51,12 @@ export const companyNavigation: NavigationConfig = {
       description: "Manage your project campaigns",
     },
     {
+      title: "Pledges",
+      href: "/dashboard/company/pledges",
+      icon: Wallet,
+      description: "View all pledges received by your company",
+    },
+    {
       title: "Analytics",
       href: "#",
       icon: LineChart,

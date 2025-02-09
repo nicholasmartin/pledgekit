@@ -55,10 +55,19 @@ export function PublicRegisterForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true)
     try {
-      // Register user with public user type
+      const displayName = `${values.firstName} ${values.lastName}`
+
+      // Register user with public user type and user metadata
       const { data, error } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
+        options: {
+          data: {
+            first_name: values.firstName,
+            last_name: values.lastName,
+            display_name: displayName
+          }
+        }
       })
 
       if (error) {
@@ -69,12 +78,16 @@ export function PublicRegisterForm() {
         throw new Error("Failed to create user account")
       }
 
-      await supabase.from('user_profiles').insert({
-        id: data.user.id,
-        first_name: values.firstName,
-        last_name: values.lastName,
-        user_type: UserType.USER,
+      // Set user type in auth.users metadata
+      const { error: typeError } = await supabase.rpc('set_user_type', {
+        user_id: data.user.id,
+        new_type: UserType.USER
       })
+
+      if (typeError) {
+        console.error('Failed to set user type:', typeError)
+        throw new Error("Failed to set user type")
+      }
 
       toast({
         title: "Registration successful!",
@@ -96,6 +109,12 @@ export function PublicRegisterForm() {
         toast({
           title: "Registration Error",
           description: "Failed to create user account. Please try again.",
+          variant: "destructive"
+        })
+      } else if (error instanceof Error && error.message === "Failed to set user type") {
+        toast({
+          title: "Registration Error",
+          description: "Failed to set user type. Please try again.",
           variant: "destructive"
         })
       } else {
