@@ -385,6 +385,7 @@ export type Database = {
           goal: number
           header_image_url: string
           id: string
+          is_private: boolean
           status: Database["public"]["Enums"]["project_status"]
           title: string
           updated_at: string | null
@@ -399,6 +400,7 @@ export type Database = {
           goal: number
           header_image_url?: string
           id?: string
+          is_private?: boolean
           status?: Database["public"]["Enums"]["project_status"]
           title: string
           updated_at?: string | null
@@ -413,6 +415,7 @@ export type Database = {
           goal?: number
           header_image_url?: string
           id?: string
+          is_private?: boolean
           status?: Database["public"]["Enums"]["project_status"]
           title?: string
           updated_at?: string | null
@@ -421,6 +424,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "projects_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_invites: {
+        Row: {
+          company_id: string
+          email: string
+          first_name: string | null
+          id: string
+          invited_at: string
+          last_name: string | null
+          status: Database["public"]["Enums"]["user_invite_status"]
+        }
+        Insert: {
+          company_id: string
+          email: string
+          first_name?: string | null
+          id?: string
+          invited_at?: string
+          last_name?: string | null
+          status?: Database["public"]["Enums"]["user_invite_status"]
+        }
+        Update: {
+          company_id?: string
+          email?: string
+          first_name?: string | null
+          id?: string
+          invited_at?: string
+          last_name?: string | null
+          status?: Database["public"]["Enums"]["user_invite_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_invites_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -527,9 +568,23 @@ export type Database = {
       }
       get_user_accessible_projects: {
         Args: {
-          p_user_id: string
+          user_id: string
         }
-        Returns: string[]
+        Returns: {
+          amount_pledged: number
+          company_id: string
+          created_at: string | null
+          description: string | null
+          end_date: string
+          goal: number
+          header_image_url: string
+          id: string
+          is_private: boolean
+          status: Database["public"]["Enums"]["project_status"]
+          title: string
+          updated_at: string | null
+          visibility: Database["public"]["Enums"]["project_visibility"]
+        }[]
       }
       get_user_project_pledges: {
         Args: {
@@ -557,6 +612,13 @@ export type Database = {
         }
         Returns: Database["public"]["Enums"]["user_type"]
       }
+      is_user_approved_for_company: {
+        Args: {
+          company_id: string
+          user_email: string
+        }
+        Returns: boolean
+      }
       rollback_user_types: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -581,6 +643,7 @@ export type Database = {
       pledge_status: "pending" | "completed" | "cancelled" | "failed"
       project_status: "published" | "draft" | "completed" | "cancelled"
       project_visibility: "public" | "private"
+      user_invite_status: "pending" | "accepted"
       user_type: "company" | "user"
     }
     CompositeTypes: {

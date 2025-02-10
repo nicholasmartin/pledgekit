@@ -65,10 +65,10 @@ export const companyNavigation: NavigationConfig = {
     },
     {
       title: "Users",
-      href: "#",
+      href: "/dashboard/company/users",
       icon: Users,
-      description: "Manage user access and roles",
-      disabled: true
+      description: "Manage approved users and invitations",
+      disabled: false
     },
     {
       title: "Feature Requests",

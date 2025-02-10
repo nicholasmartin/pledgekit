@@ -39,6 +39,22 @@
   }
   ```
 
+## App Functionality
+
+PledgeKit is a platform inspired by Kickstarter, specifically designed for software companies and their feature request backlogs. Key features include:
+
+1. **Company Users**:
+   - Register and log in to manage their feature request boards.
+   - Connect Canny.io feature request boards via API.
+   - Create projects based on feature requests, add pledge options, and rewards.
+
+2. **Regular Users**:
+   - Register and log in to browse and pledge to projects.
+   - Pledge to projects using Stripe for secure payments.
+
+3. **Public Projects**:
+   - Projects created by companies are publicly available for users to discover and support.
+
 ## Navigation Structure
 - **Pattern:** Role-Based Navigation
 - **Description:** Separate navigation configurations for companies and users.
@@ -148,3 +164,64 @@
   - `frontend/src/lib/supabase/server.ts`: Supabase server client
   - `frontend/src/components/providers/auth-provider.tsx`: Auth provider
   - `frontend/src/app/(protected)/layout.tsx`: Protected layout implementation
+
+## Company Dashboard Features
+- **Pattern:** Server-Side Data Fetching with Client Interactivity
+- **Description:** Standard pattern for building company dashboard features that require company-specific data access.
+
+### Implementation Steps
+1. **Use Server Components for Data Fetching**
+```tsx
+// pages/company/my-feature/page.tsx
+export default async function MyFeaturePage() {
+  const supabase = createServer()
+  const user = await getUser(supabase)
+
+  // Standard company data access pattern
+  const { data: companyMember } = await supabase
+    .from("company_members")
+    .select("company_id")
+    .eq("user_id", user.id)  // Always filter by user_id!
+    .single()
+
+  // Use company_id to fetch feature-specific data
+  const { data } = await supabase
+    .from("my_table")
+    .select("*")
+    .eq("company_id", companyMember.company_id)
+}
+```
+
+2. **Keep Client Components Simple**
+```tsx
+// components/my-feature.tsx
+'use client'
+
+interface Props {
+  data: MyData[]  // Receive data as props
+}
+
+export function MyFeature({ data }: Props) {
+  // Only handle UI and mutations
+  const handleDelete = async (id: string) => {
+    const supabase = createClient()
+    await supabase.from("my_table").delete().eq("id", id)
+  }
+}
+```
+
+### Best Practices
+1. **Start with Working Examples**: Check existing implementations (e.g., `pledges` or `users` pages) before building new features.
+2. **Data Access Pattern**: Always follow the standard pattern:
+   - Get user with `getUser()`
+   - Get company_id from `company_members` table (with user_id filter)
+   - Use company_id to filter feature data
+3. **Component Split**:
+   - Server Components: Handle data fetching and initial render
+   - Client Components: Handle UI interactions and mutations
+4. **Error Handling**: Add proper error logging and user-friendly error messages
+
+### Common Pitfalls to Avoid
+1. Don't skip the user_id filter when querying company_members
+2. Don't mix data fetching into client components
+3. Don't rely on RLS policies alone for data filtering
