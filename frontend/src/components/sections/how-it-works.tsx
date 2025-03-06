@@ -5,15 +5,18 @@ import { UNSPLASH_IMAGES } from "@/config/images"
 
 export function HowItWorksSection() {
   return (
-    <section className="py-24 bg-background">
+    <div id="how-it-works" className="py-16">
       <div className="container px-4 mx-auto">
-        <h2 className="text-3xl font-bold text-center mb-16">
+        <h2 className="text-3xl font-bold text-center mb-8">
           Launch Customer-Backed Features in 3 Steps
         </h2>
+        <p className="text-center text-lg text-muted-foreground max-w-3xl mx-auto mb-16">
+          One-stop platform - everything you need to transform feature requests into funded development projects.
+        </p>
 
         <div className="grid md:grid-cols-3 gap-12 max-w-6xl mx-auto mb-16">
           {/* Step 1 */}
-          <div className="space-y-4">
+          <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2">
             <div className="rounded-xl overflow-hidden mb-6">
               <UnsplashImage
                 id={UNSPLASH_IMAGES.howItWorks.step1}
@@ -23,15 +26,15 @@ export function HowItWorksSection() {
                 className="w-full object-cover"
               />
             </div>
-            <div className="text-4xl font-bold text-primary mb-4">1</div>
-            <h3 className="text-xl font-semibold">Import & Setup</h3>
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-primary font-bold text-xl mb-4">1</div>
+            <h3 className="text-xl font-semibold mb-3">Import & Setup</h3>
             <p className="text-muted-foreground">
               Connect your existing feature request tool. Our AI automatically categorizes and groups similar requests, making setup effortless.
             </p>
           </div>
 
           {/* Step 2 */}
-          <div className="space-y-4">
+          <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2">
             <div className="rounded-xl overflow-hidden mb-6">
               <UnsplashImage
                 id={UNSPLASH_IMAGES.howItWorks.step2}
@@ -41,15 +44,15 @@ export function HowItWorksSection() {
                 className="w-full object-cover"
               />
             </div>
-            <div className="text-4xl font-bold text-primary mb-4">2</div>
-            <h3 className="text-xl font-semibold">Launch Projects</h3>
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-primary font-bold text-xl mb-4">2</div>
+            <h3 className="text-xl font-semibold mb-3">Launch Projects</h3>
             <p className="text-muted-foreground">
               Choose features for development and set funding goals. Share privately with select clients or publicly to maximize exposure.
             </p>
           </div>
 
           {/* Step 3 */}
-          <div className="space-y-4">
+          <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2">
             <div className="rounded-xl overflow-hidden mb-6">
               <UnsplashImage
                 id={UNSPLASH_IMAGES.howItWorks.step3}
@@ -59,8 +62,8 @@ export function HowItWorksSection() {
                 className="w-full object-cover"
               />
             </div>
-            <div className="text-4xl font-bold text-primary mb-4">3</div>
-            <h3 className="text-xl font-semibold">Track & Deliver</h3>
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-primary font-bold text-xl mb-4">3</div>
+            <h3 className="text-xl font-semibold mb-3">Track & Deliver</h3>
             <p className="text-muted-foreground">
               Monitor pledges, update backers, and maintain your reputation score through successful delivery.
             </p>
@@ -69,10 +72,10 @@ export function HowItWorksSection() {
 
         <div className="text-center">
           <Link href="/register">
-            <Button size="lg">See It In Action</Button>
+            <Button size="lg" className="rounded-full px-8 shadow-md hover:shadow-lg transition-all">See It In Action</Button>
           </Link>
         </div>
       </div>
-    </section>
+    </div>
   )
 }

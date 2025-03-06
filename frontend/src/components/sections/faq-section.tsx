@@ -28,8 +28,12 @@ const faqs: FAQ[] = [
     answer: "We use Stripe for secure payment processing. Pledges are only charged if the campaign reaches its goal. Funds are held in escrow until the feature is delivered, protecting both developers and backers."
   },
   {
-    question: "Can we import our existing feature requests?",
-    answer: "Absolutely! PledgeKit integrates with popular tools like GitHub Issues, Canny, and ProductBoard. Our AI-powered import system automatically categorizes and groups similar requests, making setup quick and easy."
+    question: "How does the Canny integration work?",
+    answer: "PledgeKit currently integrates exclusively with Canny. Our seamless integration allows you to import feature requests directly from your Canny boards, maintain your existing workflow, and sync status updates back to Canny. This makes PledgeKit the perfect companion for teams already using Canny for feature request management."
+  },
+  {
+    question: "Will you support other tools besides Canny in the future?",
+    answer: "Yes! While we currently focus on providing the best possible integration with Canny, we're actively developing integrations with other popular feature request tools. As an early adopter, you'll have the opportunity to help shape these future integrations based on your needs."
   },
   {
     question: "What kind of analytics do you provide?",
@@ -39,13 +43,17 @@ const faqs: FAQ[] = [
 
 export function FAQSection() {
   return (
-    <Accordion type="single" collapsible className="w-full">
+    <Accordion type="single" collapsible className="w-full divide-y divide-gray-100">
       {faqs.map((faq, index) => (
-        <AccordionItem key={index} value={`item-${index}`}>
-          <AccordionTrigger className="text-left">
+        <AccordionItem 
+          key={index} 
+          value={`item-${index}`}
+          className="border-none py-4"
+        >
+          <AccordionTrigger className="text-left hover:no-underline py-2 text-lg font-medium">
             {faq.question}
           </AccordionTrigger>
-          <AccordionContent className="text-muted-foreground">
+          <AccordionContent className="text-muted-foreground pt-2 pb-4 text-base">
             {faq.answer}
           </AccordionContent>
         </AccordionItem>

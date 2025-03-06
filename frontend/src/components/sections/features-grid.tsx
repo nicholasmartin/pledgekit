@@ -43,25 +43,32 @@ const features = [
 
 export function FeaturesGridSection() {
   return (
-    <section className="py-24 bg-muted/30">
-      <div className="container px-4 mx-auto">
-        <h2 className="text-3xl font-bold text-center mb-16">
-          Why Leading SaaS Companies Choose PledgeKit
-        </h2>
+    <div className="py-12">
+      <h2 className="text-3xl font-bold text-center mb-6">
+        Why Leading SaaS Companies Choose PledgeKit
+      </h2>
+      <p className="text-center text-lg text-muted-foreground max-w-3xl mx-auto mb-16">
+        Advanced features professional product teams love
+      </p>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
-          {features.map((feature, index) => (
-            <div 
-              key={index}
-              className="p-6 rounded-lg bg-background hover:shadow-lg transition-shadow duration-200"
-            >
-              <div className="text-4xl mb-4">{feature.icon}</div>
-              <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
-              <p className="text-muted-foreground">{feature.description}</p>
-            </div>
-          ))}
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
+        {features.map((feature, index) => (
+          <div 
+            key={index}
+            className="p-6 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+          >
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-50 text-4xl mb-4">{feature.icon}</div>
+            <h3 className="text-lg font-semibold mb-3">{feature.title}</h3>
+            <p className="text-muted-foreground">{feature.description}</p>
+          </div>
+        ))}
+      </div>
+      
+      <div className="mt-16 text-center">
+        <div className="inline-block bg-blue-50 text-primary font-medium px-4 py-2 rounded-full text-sm mb-4">
+          Much more than just a feature request tool
         </div>
       </div>
-    </section>
+    </div>
   )
 }

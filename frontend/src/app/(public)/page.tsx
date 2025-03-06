@@ -12,14 +12,24 @@ export const metadata = {
 
 export default function Home() {
   return (
-    <main className="flex flex-col">
+    <main className="flex flex-col bg-gradient-to-b from-white to-gray-50">
       <div className="flex-1">
         <HeroSection />
-        <ProblemSolutionSection />
-        <HowItWorksSection />
-        <FeaturesGridSection />
-        <IntegrationSection />
-        <CTASection />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 bg-white rounded-3xl shadow-sm -mt-8 relative z-10">
+          <ProblemSolutionSection />
+        </div>
+        <div className="py-16 bg-gradient-to-b from-gray-50 to-white">
+          <HowItWorksSection />
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 bg-white rounded-3xl shadow-sm my-16">
+          <FeaturesGridSection />
+        </div>
+        <div className="py-16 bg-gradient-to-b from-white to-gray-50">
+          <IntegrationSection />
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 bg-white rounded-3xl shadow-sm my-16">
+          <CTASection />
+        </div>
       </div>
     </main>
   )
